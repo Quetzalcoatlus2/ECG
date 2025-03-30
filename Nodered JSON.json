@@ -1,92 +1,123 @@
 [
     {
-        "id": "3777d40fec26052a",
+        "id": "cde90d7b606c3de2",
         "type": "tab",
         "label": "Flow 2",
         "disabled": false,
         "info": ""
     },
     {
-        "id": "76208ed0c33b5d0c",
+        "id": "efa07b41bbdd9599",
         "type": "mqtt in",
-        "z": "3777d40fec26052a",
+        "z": "cde90d7b606c3de2",
         "name": "ECG Data",
         "topic": "sensorData/ecg",
-        "qos": "2",
+        "qos": "0",
         "datatype": "json",
         "broker": "3b123b6d.3e5826",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
         "x": 920,
         "y": 420,
         "wires": [
             [
-                "f4e4d81e1559e68e"
+                "cc0269a4bd38c2fc",
+                "12611955149b6447"
             ]
         ]
     },
     {
-        "id": "f4e4d81e1559e68e",
+        "id": "cc0269a4bd38c2fc",
         "type": "function",
-        "z": "3777d40fec26052a",
+        "z": "cde90d7b606c3de2",
         "name": "Format ECG Data",
-        "func": "msg.payload = { x: msg.payload.x, y: msg.payload.y };\nreturn msg;",
+        "func": "// Ensure the payload contains x (timestamp) and y (ECG value)\nmsg.payload = {\n    series: [\"ECG\"], // Series name\n    data: [[{ x: msg.payload.x, y: msg.payload.y }]], // Data points\n    labels: [\"\"]\n};\nreturn msg;",
         "outputs": 1,
+        "timeout": "",
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1100,
+        "x": 1110,
         "y": 420,
         "wires": [
             [
-                "f4e4d81e1559e68f"
+                "f8d9924b59186aa4",
+                "fc42b84bc1bebeaf"
             ]
         ]
     },
     {
-        "id": "f4e4d81e1559e68f",
+        "id": "fc42b84bc1bebeaf",
         "type": "ui_chart",
-        "z": "3777d40fec26052a",
+        "z": "cde90d7b606c3de2",
         "name": "ECG Chart",
         "group": "1c66c2f3.68945d",
         "order": 3,
-        "width": "6",
+        "width": "8",
         "height": "4",
         "label": "ECG",
         "chartType": "line",
-        "legend": "false",
+        "legend": "true",
         "xformat": "HH:mm:ss",
+        "nodata": "",
+        "dot": true,
+        "ymin": "0",
+        "ymax": "4095",
         "removeOlder": "1",
         "removeOlderPoints": "100",
-        "x": 1300,
-        "y": 420,
+        "removeOlderUnit": "60",
+        "cutout": "",
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1460,
+        "y": 380,
         "wires": []
     },
     {
-        "id": "bpm_mqtt_in",
+        "id": "f7f74ea09785665f",
         "type": "mqtt in",
-        "z": "3777d40fec26052a",
+        "z": "cde90d7b606c3de2",
         "name": "BPM Data",
         "topic": "sensorData/bpm",
         "qos": "2",
-        "datatype": "auto",
+        "datatype": "json",
         "broker": "3b123b6d.3e5826",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
         "x": 920,
         "y": 300,
         "wires": [
             [
-                "bpm_ui_gauge"
+                "56cf87de68143cb6"
             ]
         ]
     },
     {
-        "id": "bpm_ui_gauge",
+        "id": "56cf87de68143cb6",
         "type": "ui_gauge",
-        "z": "3777d40fec26052a",
+        "z": "cde90d7b606c3de2",
+        "name": "BPM Gauge",
         "group": "1c66c2f3.68945d",
         "order": 1,
         "width": "6",
         "height": "4",
-        "name": "BPM Gauge",
         "label": "BPM",
         "format": "{{value}}",
         "min": "0",
@@ -98,36 +129,39 @@
         ],
         "seg1": "",
         "seg2": "",
-        "x": 1100,
+        "x": 1080,
         "y": 300,
         "wires": []
     },
     {
-        "id": "spo2_mqtt_in",
+        "id": "0ddf4dac651a27af",
         "type": "mqtt in",
-        "z": "3777d40fec26052a",
+        "z": "cde90d7b606c3de2",
         "name": "SpO2 Data",
         "topic": "sensorData/spo2",
         "qos": "2",
-        "datatype": "auto",
+        "datatype": "json",
         "broker": "3b123b6d.3e5826",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
         "x": 920,
         "y": 360,
         "wires": [
             [
-                "spo2_ui_gauge"
+                "c8028c28fae374a7"
             ]
         ]
     },
     {
-        "id": "spo2_ui_gauge",
+        "id": "c8028c28fae374a7",
         "type": "ui_gauge",
-        "z": "3777d40fec26052a",
+        "z": "cde90d7b606c3de2",
+        "name": "SpO2 Gauge",
         "group": "1c66c2f3.68945d",
         "order": 2,
         "width": "6",
         "height": "4",
-        "name": "SpO2 Gauge",
         "label": "SpO2",
         "format": "{{value}}%",
         "min": "0",
@@ -139,31 +173,34 @@
         ],
         "seg1": "",
         "seg2": "",
-        "x": 1100,
+        "x": 1160,
         "y": 360,
         "wires": []
     },
     {
-        "id": "lead_status_mqtt_in",
+        "id": "23b9b34cead9d1c9",
         "type": "mqtt in",
-        "z": "3777d40fec26052a",
+        "z": "cde90d7b606c3de2",
         "name": "Lead Status",
         "topic": "sensorData/lead_off",
         "qos": "2",
-        "datatype": "auto",
+        "datatype": "auto-detect",
         "broker": "3b123b6d.3e5826",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
         "x": 920,
         "y": 480,
         "wires": [
             [
-                "lead_status_ui_text"
+                "3ea012f57a77baad"
             ]
         ]
     },
     {
-        "id": "lead_status_ui_text",
+        "id": "3ea012f57a77baad",
         "type": "ui_text",
-        "z": "3777d40fec26052a",
+        "z": "cde90d7b606c3de2",
         "group": "1c66c2f3.68945d",
         "order": 4,
         "width": "6",
@@ -172,8 +209,42 @@
         "label": "Lead Status",
         "format": "{{msg.payload}}",
         "layout": "row-spread",
-        "x": 1100,
+        "x": 1220,
         "y": 480,
+        "wires": []
+    },
+    {
+        "id": "f8d9924b59186aa4",
+        "type": "debug",
+        "z": "cde90d7b606c3de2",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1300,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "12611955149b6447",
+        "type": "debug",
+        "z": "cde90d7b606c3de2",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1300,
+        "y": 600,
         "wires": []
     },
     {
@@ -183,10 +254,26 @@
         "broker": "192.168.0.102",
         "port": "1883",
         "clientid": "nodered-client",
+        "autoConnect": true,
         "usetls": false,
         "protocolVersion": "5",
         "keepalive": "60",
-        "cleansession": true
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": "60"
     },
     {
         "id": "1c66c2f3.68945d",
@@ -195,6 +282,7 @@
         "tab": "bd33a5f2.7d4b28",
         "order": 1,
         "disp": true,
+        "layout": "row",
         "width": "6",
         "collapse": false
     },
