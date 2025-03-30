@@ -1,27 +1,27 @@
 #include <Wire.h>
 #include <WiFi.h>
-#include <PubSubClient.h>  // Replace Adafruit MQTT library
-#include "MAX30105.h"      // SparkFun MAX30105 sensor library
-#include "heartRate.h"     // Heart rate calculation for MAX30105
-#include "spo2_algorithm.h" // SpO2 calculation for MAX30105
+#include <PubSubClient.h>
+#include "MAX30105.h"
+#include "heartRate.h"
+#include "spo2_algorithm.h"
 
 // WiFi and MQTT Settings
-#define WLAN_SSID           "TP-Link_8602"  // Change to your WiFi SSID
-#define WLAN_PASS           "46503190"      // Change to your WiFi password
-#define MQTT_SERVER         "192.168.0.102" // MQTT Broker IP (e.g., Mosquitto)
-#define MQTT_PORT           1883             // MQTT Port
+#define WLAN_SSID           "TP-Link_8602"
+#define WLAN_PASS           "46503190"
+#define MQTT_SERVER         "192.168.0.102"
+#define MQTT_PORT           1883
 
-const char* mqttUser = "pi";  // Replace with your MQTT broker username
-const char* mqttPassword = "Mariuspi";  // Replace with your MQTT broker password
+const char* mqttUser = "pi";
+const char* mqttPassword = "Mariuspi";
 
 // Rewired Pins for MAX30105 (I2C)
-#define MAX30105_SDA        21  // I2C SDA for MAX30105
-#define MAX30105_SCL        22  // I2C SCL for MAX30105
+#define MAX30105_SDA        21
+#define MAX30105_SCL        22
 
 // Rewired Pins for AD8232 (ECG sensor)
-#define AD8232_OUTPUT_PIN   36  // ADC pin for AD8232 ECG sensor output
-#define AD8232_LO_PLUS_PIN  32  // Lead-Off Positive Pin for AD8232
-#define AD8232_LO_MINUS_PIN 33  // Lead-Off Negative Pin for AD8232
+#define AD8232_OUTPUT_PIN   36
+#define AD8232_LO_PLUS_PIN  32
+#define AD8232_LO_MINUS_PIN 33
 
 // Global Variables & Objects
 WiFiClient espClient;
@@ -48,7 +48,6 @@ const char* spo2_topic = "sensorData/spo2";
 const char* ecg_topic = "sensorData/ecg";
 const char* lead_off_topic = "sensorData/lead_off";
 
-
 void MQTT_connect() {
   while (!mqttClient.connected()) {
     if (mqttClient.connect("ESP32Client", mqttUser, mqttPassword)) {
@@ -61,20 +60,16 @@ void MQTT_connect() {
   }
 }
 
-
-// MAX30105 Sensor Data Processing
 void readSensorData() {
-  // Collect MAX30105 samples
   for (byte i = 0; i < MAXBUFFERSIZE; i++) {
     while (!sensor.available()) {
-      sensor.check();  // Wait for new data
+      sensor.check();
     }
     redBuffer[i] = sensor.getRed();
     irBuffer[i]  = sensor.getIR();
     sensor.nextSample();
   }
 
-  // Calculate heart rate and SpO2
   int32_t heartRate;
   int8_t validHeartRate;
   int32_t spo2;
@@ -88,45 +83,50 @@ void readSensorData() {
   spo2_dt = validSpO2    ? spo2   : -1;
 }
 
-// AD8232 Sensor Reading
 void readECG() {
-  // Read the AD8232 analog ECG value
   ecg_value = analogRead(AD8232_OUTPUT_PIN);
-
-  // Read the digital lead-off signals
   lead_off_plus  = digitalRead(AD8232_LO_PLUS_PIN);
   lead_off_minus = digitalRead(AD8232_LO_MINUS_PIN);
 }
 
-// MQTT Publish Function
 void publishSensorData() {
+  // Publish BPM and SpO2 as simple numeric values
   String bpmStr = String(bpm_dt);
   String spo2Str = String(spo2_dt);
-  String ecgStr = String(ecg_value);
-  String leadOffStr = String("LO+: ") + (lead_off_plus ? "Active" : "Inactive") +
-                      String(", LO-: ") + (lead_off_minus ? "Active" : "Inactive");
-
-  // Publish data to respective topics
   mqttClient.publish(bpm_topic, bpmStr.c_str());
   mqttClient.publish(spo2_topic, spo2Str.c_str());
+
+  // Publish ECG data as JSON with timestamp
+  String ecgStr = String("{\"x\":") + String(millis()) + String(",\"y\":") + String(ecg_value) + String("}");
   mqttClient.publish(ecg_topic, ecgStr.c_str());
+
+  // Debug output for ECG data
+  Serial.println("ECG Data Sent: " + ecgStr);
+
+  // Publish descriptive lead-off status
+  String leadOffStr;
+  if (lead_off_plus && lead_off_minus) {
+    leadOffStr = "Both electrodes are disconnected (RA and LA).";
+  } else if (lead_off_plus) {
+    leadOffStr = "Right arm (RA) electrode is disconnected.";
+  } else if (lead_off_minus) {
+    leadOffStr = "Left arm (LA) electrode is disconnected.";
+  } else {
+    leadOffStr = "Both electrodes are properly connected.";
+  }
   mqttClient.publish(lead_off_topic, leadOffStr.c_str());
 
+  // Debug output
   Serial.println("Published data to MQTT Broker:");
   Serial.println("BPM: " + bpmStr);
   Serial.println("SpO2: " + spo2Str);
-  Serial.println("ECG: " + ecgStr);
   Serial.println("Lead Off: " + leadOffStr);
 }
 
-// Setup Function
 void setup() {
   Serial.begin(115200);
-
-  // Initialize I2C for MAX30105
   Wire.begin(MAX30105_SDA, MAX30105_SCL);
 
-  // Connect to WiFi
   WiFi.begin(WLAN_SSID, WLAN_PASS);
   Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED) {
@@ -138,43 +138,31 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  // Initialize MQTT connection
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   MQTT_connect();
 
-  // Initialize MAX30105 sensor
   Serial.print("Initializing MAX30105...");
   if (!sensor.begin()) {
     Serial.println("FAILED");
-    while (1);  // Halt if sensor initialization fails
+    while (1);
   }
   Serial.println("SUCCESS");
   sensor.setup();
   sensor.setPulseAmplitudeRed(0x0A);
   sensor.setPulseAmplitudeIR(0x0A);
 
-  // Initialize AD8232 pins
   pinMode(AD8232_LO_PLUS_PIN, INPUT);
   pinMode(AD8232_LO_MINUS_PIN, INPUT);
 }
 
-// Loop Function
 void loop() {
-  // Ensure MQTT connection
   if (!mqttClient.connected()) {
     MQTT_connect();
   }
 
-  // Read sensor data
   readSensorData();
   readECG();
-
-  // Publish collected sensor data to MQTT Broker
   publishSensorData();
-
-  // Maintain MQTT connection
   mqttClient.loop();
-
-  // Delay before next reading (adjust the delay for faster or slower publishing)
-  delay(500);  // Delay for 0.5 seconds (can be reduced for faster publishing)
+  delay(100);
 }
