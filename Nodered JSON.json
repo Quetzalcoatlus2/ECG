@@ -1,0 +1,242 @@
+[
+    {
+        "id": "3777d40fec26052a",
+        "type": "tab",
+        "label": "Flow 2",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "fd41997621690e24",
+        "type": "mqtt in",
+        "z": "3777d40fec26052a",
+        "name": "BPM Data",
+        "topic": "sensorData/bpm",
+        "qos": "2",
+        "datatype": "json",
+        "broker": "3b123b6d.3e5826",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 920,
+        "y": 300,
+        "wires": [
+            [
+                "42cc3fd6b7553c4d"
+            ]
+        ]
+    },
+    {
+        "id": "42cc3fd6b7553c4d",
+        "type": "ui_gauge",
+        "z": "3777d40fec26052a",
+        "name": "BPM Gauge",
+        "group": "1c66c2f3.68945d",
+        "order": 1,
+        "width": "6",
+        "height": "4",
+        "gtype": "gage",
+        "title": "Heart Rate (BPM)",
+        "label": "BPM",
+        "format": "{{value}}",
+        "min": "0",
+        "max": "180",
+        "colors": [
+            "#ff0000",
+            "#f4e300",
+            "#00e400"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 1150,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "22dcc8dae74329e7",
+        "type": "mqtt in",
+        "z": "3777d40fec26052a",
+        "name": "SpO2 Data",
+        "topic": "sensorData/spo2",
+        "qos": "2",
+        "datatype": "json",
+        "broker": "3b123b6d.3e5826",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 920,
+        "y": 360,
+        "wires": [
+            [
+                "72898d79107550f7"
+            ]
+        ]
+    },
+    {
+        "id": "72898d79107550f7",
+        "type": "ui_gauge",
+        "z": "3777d40fec26052a",
+        "name": "SpO2 Gauge",
+        "group": "1c66c2f3.68945d",
+        "order": 2,
+        "width": "6",
+        "height": "4",
+        "gtype": "gage",
+        "title": "SpO2 Level",
+        "label": "SpO2",
+        "format": "{{value}}",
+        "min": "0",
+        "max": "100",
+        "colors": [
+            "#ff0000",
+            "#f4e300",
+            "#00e400"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 1150,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "76208ed0c33b5d0c",
+        "type": "mqtt in",
+        "z": "3777d40fec26052a",
+        "name": "ECG Data",
+        "topic": "sensorData/ecg",
+        "qos": "2",
+        "datatype": "json",
+        "broker": "3b123b6d.3e5826",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 920,
+        "y": 420,
+        "wires": [
+            [
+                "f4e4d81e1559e68e"
+            ]
+        ]
+    },
+    {
+        "id": "f4e4d81e1559e68e",
+        "type": "ui_chart",
+        "z": "3777d40fec26052a",
+        "name": "ECG Chart",
+        "group": "1c66c2f3.68945d",
+        "order": 3,
+        "width": "6",
+        "height": "4",
+        "label": "ECG",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": "1",
+        "removeOlderPoints": "100",
+        "cutout": "",
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1150,
+        "y": 420,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3cdfa8ea607d8032",
+        "type": "mqtt in",
+        "z": "3777d40fec26052a",
+        "name": "Lead Off Status",
+        "topic": "sensorData/lead_off",
+        "qos": "2",
+        "datatype": "json",
+        "broker": "3b123b6d.3e5826",
+        "inputs": 0,
+        "x": 920,
+        "y": 480,
+        "wires": [
+            [
+                "964d81b847e601c8"
+            ]
+        ]
+    },
+    {
+        "id": "964d81b847e601c8",
+        "type": "ui_text",
+        "z": "3777d40fec26052a",
+        "group": "1c66c2f3.68945d",
+        "order": 4,
+        "width": "6",
+        "height": "4",
+        "name": "Lead Off Status",
+        "label": "Lead Off",
+        "format": "{{msg.payload}}",
+        "x": 1150,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "3b123b6d.3e5826",
+        "type": "mqtt-broker",
+        "name": "Mosquitto Broker",
+        "broker": "192.168.0.102",
+        "port": "1883",
+        "clientid": "nodered-client",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "5",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": "60"
+    },
+    {
+        "id": "1c66c2f3.68945d",
+        "type": "ui_group",
+        "name": "Sensor Data",
+        "tab": "bd33a5f2.7d4b28",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "bd33a5f2.7d4b28",
+        "type": "ui_tab",
+        "name": "Sensor Dashboard",
+        "icon": "dashboard",
+        "order": 1
+    }
+]
