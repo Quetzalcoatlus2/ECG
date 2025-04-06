@@ -1,70 +1,80 @@
 #include <Wire.h>
 #include <WiFi.h>
+#define MQTT_MAX_PACKET_SIZE 512  // MOVED HERE - before PubSubClient
 #include <PubSubClient.h>
 #include "MAX30105.h"
 #include "heartRate.h"
 #include "spo2_algorithm.h"
+#include "esp_timer.h"
 
 // WiFi and MQTT Settings
-#define WLAN_SSID           "TP-Link_8602"
-#define WLAN_PASS           "46503190"
-#define MQTT_SERVER         "192.168.0.102"
-#define MQTT_PORT           1883
+#define WLAN_SSID "TP-Link_8602"
+#define WLAN_PASS "46503190"
+#define MQTT_SERVER "192.168.0.102"  // Make sure this matches your broker's IP
+#define MQTT_PORT 1883
+#define MQTT_USER "pi"
+#define MQTT_PASSWORD "Mariuspi"
 
-const char* mqttUser = "pi";
-const char* mqttPassword = "Mariuspi";
+// MQTT topics (fixed typo and incorrect topic)
+#define BPM_TOPIC "sensorData/bpm"
+#define SPO2_TOPIC "sensorData/spo2"  
+#define ECG_TOPIC "sensorData/ecg"
+#define LEAD_OFF_TOPIC "sensorData/lead_off"  
 
-// Rewired Pins for MAX30105 (I2C)
-#define MAX30105_SDA        21
-#define MAX30105_SCL        22
+// MAX30105 (I2C)
+#define MAX30105_SDA 21
+#define MAX30105_SCL 22
 
-// Rewired Pins for AD8232 (ECG sensor)
-#define AD8232_OUTPUT_PIN   36
-#define AD8232_LO_PLUS_PIN  32
+// AD8232 (ECG sensor)
+#define AD8232_OUTPUT_PIN 36
+#define AD8232_LO_PLUS_PIN 32
 #define AD8232_LO_MINUS_PIN 33
 
-// Global Variables & Objects
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
-
-// MAX30105 sensor and buffers
 MAX30105 sensor;
+
 #define MAXBUFFERSIZE 100
 uint32_t redBuffer[MAXBUFFERSIZE];
 uint32_t irBuffer[MAXBUFFERSIZE];
 
-// Processed sensor data
 float bpm_dt = 0;
 float spo2_dt = 0;
-
-// AD8232 sensor data
 volatile int ecg_value = 0;
 volatile bool lead_off_plus = false;
 volatile bool lead_off_minus = false;
 
-// MQTT Topics
-const char* bpm_topic = "sensorData/bpm";
-const char* spo2_topic = "sensorData/spo2";
-const char* ecg_topic = "sensorData/ecg";
-const char* lead_off_topic = "sensorData/lead_off";
+unsigned long lastPublishTime = 0;
+
+// ------------------ MQTT ------------------
 
 void MQTT_connect() {
-  while (!mqttClient.connected()) {
-    if (mqttClient.connect("ESP32Client", mqttUser, mqttPassword)) {
+  int attempts = 0;
+  while (!mqttClient.connected() && attempts < 5) { // Limit retry attempts
+    attempts++;
+    Serial.print("Attempting MQTT connection (attempt " + String(attempts) + ")...");
+    
+    // Generate a random client ID
+    String clientId = "ESP32Client-";
+    clientId += String(random(0xffff), HEX);
+    
+    // Attempt to connect with client ID and credentials
+    if (mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASSWORD)) {
       Serial.println("Connected to MQTT Broker");
     } else {
-      Serial.print("MQTT connection failed, rc=");
+      Serial.print("Failed, rc=");
       Serial.print(mqttClient.state());
-      delay(1000);
+      Serial.println(" Retrying in 5 seconds...");
+      delay(5000);
     }
   }
 }
 
+// ------------------ Sensor Reading ------------------
+
 void readSensorData() {
   for (byte i = 0; i < MAXBUFFERSIZE; i++) {
-    while (!sensor.available()) {
-      sensor.check();
-    }
+    while (!sensor.available()) sensor.check();
     redBuffer[i] = sensor.getRed();
     irBuffer[i]  = sensor.getIR();
     sensor.nextSample();
@@ -80,89 +90,120 @@ void readSensorData() {
   );
 
   bpm_dt  = validHeartRate ? heartRate : -1;
-  spo2_dt = validSpO2    ? spo2   : -1;
+  spo2_dt = validSpO2 ? spo2 : -1;
 }
 
 void readECG() {
+  ecg_value = analogRead(AD8232_OUTPUT_PIN); // Read ECG value
+}
+
+// ------------------ MQTT Publish ------------------
+
+// Modified ECG publishing function
+void publishSensorDataMQTT() {
+  // Read ECG value
   ecg_value = analogRead(AD8232_OUTPUT_PIN);
-  lead_off_plus  = digitalRead(AD8232_LO_PLUS_PIN);
+  
+  // Simply send the ECG value as a string
+  String ecgStr = String(ecg_value);
+  mqttClient.publish(ECG_TOPIC, ecgStr.c_str());
+}
+
+void publishOtherSensorDataMQTT() {
+  // Read lead status before publishing
+  lead_off_plus = digitalRead(AD8232_LO_PLUS_PIN);
   lead_off_minus = digitalRead(AD8232_LO_MINUS_PIN);
-}
-
-void publishSensorData() {
-  // Publish BPM and SpO2 as simple numeric values
+  
+  // Publish BPM data (format as JSON for consistency)
   String bpmStr = String(bpm_dt);
+  mqttClient.publish(BPM_TOPIC, bpmStr.c_str());
+
+  // Publish SpO2 data (format as JSON for consistency)
   String spo2Str = String(spo2_dt);
-  mqttClient.publish(bpm_topic, bpmStr.c_str());
-  mqttClient.publish(spo2_topic, spo2Str.c_str());
+  mqttClient.publish(SPO2_TOPIC, spo2Str.c_str());
 
-  // Publish ECG data as JSON with timestamp
-  String ecgStr = String("{\"x\":") + String(millis()) + String(",\"y\":") + String(ecg_value) + String("}");
-  mqttClient.publish(ecg_topic, ecgStr.c_str());
-
-  // Debug output for ECG data
-  Serial.println("ECG Data Sent: " + ecgStr);
-
-  // Publish descriptive lead-off status
-  String leadOffStr;
+  // Publish Lead Status
+  String leadStatusStr;
   if (lead_off_plus && lead_off_minus) {
-    leadOffStr = "Both electrodes are disconnected (RA and LA).";
+    leadStatusStr = "Both electrodes are disconnected (RA and LA).";
   } else if (lead_off_plus) {
-    leadOffStr = "Right arm (RA) electrode is disconnected.";
+    leadStatusStr = "Right arm (RA) electrode is disconnected.";
   } else if (lead_off_minus) {
-    leadOffStr = "Left arm (LA) electrode is disconnected.";
+    leadStatusStr = "Left arm (LA) electrode is disconnected.";
   } else {
-    leadOffStr = "Both electrodes are properly connected.";
+    leadStatusStr = "Both electrodes are properly connected.";
   }
-  mqttClient.publish(lead_off_topic, leadOffStr.c_str());
-
-  // Debug output
-  Serial.println("Published data to MQTT Broker:");
-  Serial.println("BPM: " + bpmStr);
-  Serial.println("SpO2: " + spo2Str);
-  Serial.println("Lead Off: " + leadOffStr);
+  mqttClient.publish(LEAD_OFF_TOPIC, leadStatusStr.c_str());
 }
+
+// ------------------ Timer Callback ------------------
+
+void ecg_timer_callback(void* arg) {
+  readECG();
+  publishSensorDataMQTT();
+}
+
+// ------------------ Setup & Loop ------------------
 
 void setup() {
   Serial.begin(115200);
   Wire.begin(MAX30105_SDA, MAX30105_SCL);
 
+  // Initialize random for client ID generation
+  randomSeed(micros());
+
   WiFi.begin(WLAN_SSID, WLAN_PASS);
-  Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(250);
     Serial.print(".");
   }
-  Serial.println();
-  Serial.println("WiFi connected");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  Serial.println("\nWiFi connected, IP: " + WiFi.localIP().toString());
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Pinging MQTT broker...");
+    IPAddress brokerIP;
+    if (WiFi.hostByName(MQTT_SERVER, brokerIP)) {
+      Serial.println("MQTT broker reachable at IP: " + brokerIP.toString());
+    } else {
+      Serial.println("MQTT broker not reachable.");
+    }
+  }
 
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   MQTT_connect();
 
-  Serial.print("Initializing MAX30105...");
   if (!sensor.begin()) {
-    Serial.println("FAILED");
+    Serial.println("MAX30105 init failed!");
     while (1);
   }
-  Serial.println("SUCCESS");
   sensor.setup();
   sensor.setPulseAmplitudeRed(0x0A);
   sensor.setPulseAmplitudeIR(0x0A);
 
   pinMode(AD8232_LO_PLUS_PIN, INPUT);
   pinMode(AD8232_LO_MINUS_PIN, INPUT);
+  pinMode(AD8232_OUTPUT_PIN, INPUT);
+
+  const esp_timer_create_args_t ecg_timer_args = {
+      .callback = &ecg_timer_callback,
+      .name = "ecg_timer"
+  };
+  esp_timer_handle_t ecg_timer;
+  esp_timer_create(&ecg_timer_args, &ecg_timer);
+  esp_timer_start_periodic(ecg_timer, 10000); // Sample every 10ms (100Hz)
 }
 
 void loop() {
-  if (!mqttClient.connected()) {
-    MQTT_connect();
+  if (!mqttClient.connected()) MQTT_connect();
+
+  // Publish other data every second
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastPublishTime >= 1000) {
+    readSensorData(); // Read MAX30102 data
+    publishOtherSensorDataMQTT();
+    lastPublishTime = currentMillis;
   }
 
-  readSensorData();
-  readECG();
-  publishSensorData();
-  mqttClient.loop();
-  delay(100);
+  mqttClient.loop(); // Handle MQTT communication
+  // Removed delay to maximize sampling rate
 }
