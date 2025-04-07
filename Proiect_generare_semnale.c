@@ -218,6 +218,55 @@ void set_frequency(uint32_t freq) {
     uart_send(freq_str);
 }
 
+// Add this function to process commands
+void process_command(void) {
+    char cmd[16] = {0};
+    uint32_t freq = 0;
+    
+    // Parse command string
+    sscanf(uart_rx_buf, "%15s %lu", cmd, &freq);
+    
+    if (strcmp(cmd, "SINE") == 0) {
+        signal_type = WAVE_SINE;
+        uart_send("Setting waveform: Sine\r\n");
+        if (freq > 0) {
+            set_frequency(freq);
+        }
+    }
+    else if (strcmp(cmd, "TRIANGLE") == 0) {
+        signal_type = WAVE_TRIANGLE;
+        uart_send("Setting waveform: Triangle\r\n");
+        if (freq > 0) {
+            set_frequency(freq);
+        }
+    }
+    else if (strcmp(cmd, "SAW") == 0) {
+        signal_type = WAVE_SAWTOOTH;
+        uart_send("Setting waveform: Sawtooth\r\n");
+        if (freq > 0) {
+            set_frequency(freq);
+        }
+    }
+    else if (strcmp(cmd, "SQUARE") == 0) {
+        signal_type = WAVE_SQUARE;
+        uart_send("Setting waveform: Square\r\n");
+        if (freq > 0) {
+            set_frequency(freq);
+        }
+    }
+    else if (strcmp(cmd, "HELP") == 0) {
+        uart_send("Available commands:\r\n");
+        uart_send("  SINE <freq>     - Generate sine wave\r\n");
+        uart_send("  TRIANGLE <freq> - Generate triangle wave\r\n");
+        uart_send("  SAW <freq>      - Generate sawtooth wave\r\n");
+        uart_send("  SQUARE <freq>   - Generate square wave\r\n");
+        uart_send("  HELP            - Show this help\r\n");
+    }
+    else {
+        uart_send("Unknown command. Type HELP for available commands.\r\n");
+    }
+}
+
 // Timer B0 interrupt service routine for waveform generation
 #pragma vector=TIMER0_B0_VECTOR
 __interrupt void TIMER0_B0_ISR(void) {
@@ -327,9 +376,4 @@ void Software_Trim(void) {
     CSCTL0 = csCtl0Copy;
     CSCTL1 = csCtl1Copy;
     while(CSCTL7 & (FLLUNLOCK0 | FLLUNLOCK1));
-}
-
-// Placeholder for command processing function
-void process_command(void) {
-    // Implement command processing logic here
 }
