@@ -8,7 +8,6 @@
 // Clock and pin definitions
 #define MCLK_FREQ_MHZ 8          // Change from 16 to 8
 #define SMCLK_FREQ 8000000       // Change from 16000000 to 8000000
-#define LED BIT0            // LED on P1.0 for status indication
 
 // Waveform types
 #define WAVE_SINE       0
@@ -47,6 +46,7 @@ void generate_sine_table(void);
 void uart_send(const char *str);
 void set_frequency(uint32_t freq);
 void process_command(void);
+void display_help(void);
 
 void main(void) {
     WDTCTL = WDTPW | WDTHOLD;   // Stop watchdog timer
@@ -56,11 +56,14 @@ void main(void) {
     generate_sine_table();      // Generate lookup table for sine wave
     dac_init();                 // Initialize DAC
     timer_init();               // Initialize timer for waveform generation
-
+    
     // Send initial welcome message
     uart_send("MSP430 Signal Generator Ready\r\n");
+    
+    // Display help information at startup
+    display_help();
 
-    // Replace your current main loop with this:
+    // Main loop
     while (1) {
         // Check for incoming UART data
         if (UCA1IFG & UCRXIFG) {
@@ -103,9 +106,11 @@ void clock_init(void) {
 
 // TX-only UART initialization
 void uart_init(void) {
-    // Configure LED for visual feedback
-    P1DIR |= BIT0;
-    P1OUT &= ~BIT0;
+    // Configure LEDs for visual feedback
+    P1DIR |= BIT0;       // Configure P1.0 (used later as DAC output)
+    P1OUT &= ~BIT0;      // Initialize P1.0 off
+    P6DIR |= BIT6;       // Configure P6.6 as output for frequency indication
+    P6OUT &= ~BIT6;      // Initialize P6.6 off
 
     // Basic clock setup - simple and reliable
     PM5CTL0 &= ~LOCKLPM5;       // Enable GPIO
@@ -218,10 +223,10 @@ void set_frequency(uint32_t freq) {
     uart_send(freq_str);
 }
 
-// Add this function to process commands
+// Process commands
 void process_command(void) {
     char cmd[16] = {0};
-    uint32_t freq = 0;
+    uint32_t value = 0;
     int i, j;
 
     // Trim leading whitespace
@@ -238,32 +243,130 @@ void process_command(void) {
     }
     cmd[j] = '\0';
 
-    // Extract frequency if present
+    // Extract numeric value if present
     while (uart_rx_buf[i] == ' ') i++;  // Skip spaces
     if (uart_rx_buf[i]) {
-        freq = atoi(&uart_rx_buf[i]);
+        value = atoi(&uart_rx_buf[i]);
     }
 
     if (strcmp(cmd, "HELP") == 0) {
-        uart_send("Available commands:\r\n");
-        uart_send("  SINE <freq>     - Generate sine wave\r\n");
-        uart_send("  TRIANGLE <freq> - Generate triangle wave\r\n");
-        uart_send("  SAW <freq>      - Generate sawtooth wave\r\n");
-        uart_send("  SQUARE <freq>   - Generate square wave\r\n");
-        uart_send("  HELP            - Show this help\r\n");
+        display_help(); // Use the helper function instead of duplicate code
     }
-    /* Rest of your command handling remains the same */
     else if (strcmp(cmd, "SINE") == 0) {
         signal_type = WAVE_SINE;
         uart_send("Setting waveform: Sine\r\n");
-        if (freq > 0) {
-            set_frequency(freq);
+        if (value > 0) {
+            set_frequency(value);
         }
     }
-    // Other commands...
+    else if (strcmp(cmd, "TRIANGLE") == 0) {
+        signal_type = WAVE_TRIANGLE;
+        uart_send("Setting waveform: Triangle\r\n");
+        if (value > 0) {
+            set_frequency(value);
+        }
+    }
+    else if (strcmp(cmd, "SAW") == 0) {
+        signal_type = WAVE_SAWTOOTH;
+        uart_send("Setting waveform: Sawtooth\r\n");
+        if (value > 0) {
+            set_frequency(value);
+        }
+    }
+    else if (strcmp(cmd, "SQUARE") == 0) {
+        signal_type = WAVE_SQUARE;
+        uart_send("Setting waveform: Square\r\n");
+        if (value > 0) {
+            set_frequency(value);
+        }
+    }
+    else if (strcmp(cmd, "AMP") == 0 || strcmp(cmd, "AMPLITUDE") == 0) {
+        if (value >= 0 && value <= 4095) {
+            amplitude = value;
+            
+            // Format amplitude message
+            char amp_str[32];
+            char amp_val[16];
+            uint8_t idx = 0;
+            uint16_t temp = amplitude;
+            
+            // Convert to string manually
+            if (temp == 0) {
+                amp_val[idx++] = '0';
+            } else {
+                uint8_t digits[5]; // Max 4 digits for 12-bit value + null
+                uint8_t digit_count = 0;
+                
+                while (temp > 0) {
+                    digits[digit_count++] = temp % 10;
+                    temp /= 10;
+                }
+                
+                while (digit_count > 0) {
+                    amp_val[idx++] = '0' + digits[--digit_count];
+                }
+            }
+            amp_val[idx] = '\0';
+            
+            strcpy(amp_str, "Amplitude set to: ");
+            strcat(amp_str, amp_val);
+            strcat(amp_str, "\r\n");
+            uart_send(amp_str);
+        } else {
+            uart_send("Invalid amplitude. Range: 0-4095\r\n");
+        }
+    }
+    else if (strcmp(cmd, "OFFSET") == 0) {
+        if (value >= 0 && value <= 4095) {
+            offset = value;
+            
+            // Format offset message
+            char ofs_str[32];
+            char ofs_val[16];
+            uint8_t idx = 0;
+            uint16_t temp = offset;
+            
+            // Convert to string manually
+            if (temp == 0) {
+                ofs_val[idx++] = '0';
+            } else {
+                uint8_t digits[5]; // Max 4 digits for 12-bit value + null
+                uint8_t digit_count = 0;
+                
+                while (temp > 0) {
+                    digits[digit_count++] = temp % 10;
+                    temp /= 10;
+                }
+                
+                while (digit_count > 0) {
+                    ofs_val[idx++] = '0' + digits[--digit_count];
+                }
+            }
+            ofs_val[idx] = '\0';
+            
+            strcpy(ofs_str, "Offset set to: ");
+            strcat(ofs_str, ofs_val);
+            strcat(ofs_str, "\r\n");
+            uart_send(ofs_str);
+        } else {
+            uart_send("Invalid offset. Range: 0-4095\r\n");
+        }
+    }
     else {
         uart_send("Unknown command. Type HELP for available commands.\r\n");
     }
+}
+
+// Update the help function to include amplitude and offset commands
+void display_help(void) {
+    uart_send("Available commands:\r\n");
+    uart_send("  SINE <freq>     - Generate sine wave\r\n");
+    uart_send("  TRIANGLE <freq> - Generate triangle wave\r\n");
+    uart_send("  SAW <freq>      - Generate sawtooth wave\r\n");
+    uart_send("  SQUARE <freq>   - Generate square wave\r\n");
+    uart_send("  AMP <value>     - Set amplitude (0-4095)\r\n");
+    uart_send("  OFFSET <value>  - Set offset (0-4095)\r\n");
+    uart_send("  HELP            - Show this help\r\n");
 }
 
 // Timer B0 interrupt service routine for waveform generation
@@ -272,6 +375,7 @@ __interrupt void TIMER0_B0_ISR(void) {
     static uint8_t phase = 0;
     static uint16_t triangle_val = 0;
     static uint8_t triangle_dir = 1;
+    static uint8_t led_counter = 0;
     uint16_t dac_value = 0;
 
     // Generate waveform based on current type
@@ -315,6 +419,16 @@ __interrupt void TIMER0_B0_ISR(void) {
 
     // Update phase for next cycle
     phase = (phase + 1) & 0xFF;  // Wrap around at 256
+    
+    // Toggle LED to indicate frequency
+    if (phase == 0) {
+        // Only toggle every few cycles to make LED visible at higher frequencies
+        led_counter++;
+        if (led_counter >= 1) {  // Adjust divisor based on visibility needs
+            P6OUT ^= BIT6;  // Toggle the LED
+            led_counter = 0;
+        }
+    }
 }
 
 // Functia Software_Trim pentru stabilizarea frecventei DCO
