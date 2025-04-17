@@ -1,0 +1,5 @@
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\HealthMonitor.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\HealthMonitor.AssemblyInfoInputs.cache
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\HealthMonitor.AssemblyInfo.cs
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\HealthMonitor.csproj.CoreCompileInputs.cache
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\HealthMonitor.sourcelink.json
