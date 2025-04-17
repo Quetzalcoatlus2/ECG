@@ -3,3 +3,13 @@ C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop
 C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\HealthMonitor.AssemblyInfo.cs
 C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\HealthMonitor.csproj.CoreCompileInputs.cache
 C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\HealthMonitor.sourcelink.json
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\bin\Debug\net10.0\HealthMonitor.exe
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\bin\Debug\net10.0\HealthMonitor.deps.json
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\bin\Debug\net10.0\HealthMonitor.runtimeconfig.json
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\bin\Debug\net10.0\HealthMonitor.dll
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\bin\Debug\net10.0\HealthMonitor.pdb
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\HealthMonitor.dll
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\refint\HealthMonitor.dll
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\HealthMonitor.pdb
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\HealthMonitor.genruntimeconfig.cache
+C:\Users\Quetzal\OneDrive - Gheorghe Asachi Technical University of Iasi\Desktop\licenta\VSCode\POO\HealthMonitor\obj\Debug\net10.0\ref\HealthMonitor.dll

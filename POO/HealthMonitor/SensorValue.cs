@@ -1,9 +1,12 @@
+using System;
+using System.Globalization; // Ensure this is present
+
 public enum SensorType
 {
     None,
     SkinTemperature,
     HeartRate,
-    BloodGlucose    
+    BloodGlucose
 }
 
 public class SensorValue
@@ -20,7 +23,7 @@ public class SensorValue
     }
     public double Value
     {
-        get { return value; }
+        get { return this.value; } // Using this. for consistency
         set { this.value = value; }
     }
     public DateTime TimeStamp
@@ -28,33 +31,47 @@ public class SensorValue
         get { return timeStamp; }
         set { timeStamp = value; }
     }
- 
+
 
     public string TimeStampString
     {
-        get { return timeStamp.ToString("dd-MMM-yy HH:mm:ss"); }
-        set { timeStamp = DateTime.ParseExact(value, "dd-MMM-yy HH:mm:ss", CultureInfo.InvariantCulture); }
+        get
+        {
+            // Specify CultureInfo.InvariantCulture for consistent formatting without dots
+            return timeStamp.ToString("dd-MMM-yy HH:mm:ss", CultureInfo.InvariantCulture);
+        }
+        set
+        {
+            // Keep using InvariantCulture for parsing
+            timeStamp = DateTime.ParseExact(value, "dd-MMM-yy HH:mm:ss", CultureInfo.InvariantCulture);
+        }
     }
-
-    #endregion
+    #endregion // Corrected placement
 
     #region constructors
+    // Corrected default constructor
     public SensorValue()
     {
-        typeof = SensorType.None;
+        this.type = SensorType.None; // Corrected assignment
+        this.value = 0.0; // Initialize value
+        this.timeStamp = DateTime.MinValue; // Initialize timestamp
     }
+
     public SensorValue(SensorType type, double value, DateTime timeStamp)
     {
         this.type = type;
         this.value = value;
         this.timeStamp = timeStamp;
-    }  
+    }
 
-    public SensorValue(SensorType type, double value, string timeStamp)
+    // Constructor now uses the string parameter
+    public SensorValue(SensorType type, double value, string timeStampString)
     {
         this.type = type;
         this.value = value;
-        this.timeStamp = DateTime.Now;
+        // Use the setter logic to parse the string
+        this.TimeStampString = timeStampString;
     }
     #endregion
+
 }
