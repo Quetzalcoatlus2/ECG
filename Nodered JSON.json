@@ -1,19 +1,19 @@
 [
     {
-        "id": "2f76ba572620725a",
+        "id": "05a84821d8d8a954",
         "type": "tab",
-        "label": "Flow 2",
+        "label": "Flux 2",
         "disabled": false,
         "info": ""
     },
     {
-        "id": "951a4855cfa1cb29",
+        "id": "3a4efd658a126dc8",
         "type": "mqtt in",
-        "z": "2f76ba572620725a",
-        "name": "ECG Data",
+        "z": "05a84821d8d8a954",
+        "name": "Date ECG",
         "topic": "sensorData/ecg",
         "qos": "0",
-        "datatype": "json",
+        "datatype": "utf8",
         "broker": "eba40148ecd07e6b",
         "nl": false,
         "rap": false,
@@ -22,37 +22,58 @@
         "y": 420,
         "wires": [
             [
-                "094e1b7f603ba27b",
-                "2bb88d0ed2f8f0dc",
-                "0787e289da81ee9a"
+                "5be69650815989e0",
+                "46e8ba70261b0921",
+                "53539dc8d9934aaa"
             ]
         ]
     },
     {
-        "id": "2bb88d0ed2f8f0dc",
+        "id": "53539dc8d9934aaa",
+        "type": "function",
+        "z": "05a84821d8d8a954",
+        "name": "Parsează ECG pentru Grafic",
+        "func": "msg.payload = parseFloat(msg.payload);\nif (isNaN(msg.payload)) {\n    // Opțional: Gestionează valori nenumerice, ex: returnează null sau loghează eroarea\n    node.warn(\"S-a primit o valoare ECG nenumerică: \" + msg.payload);\n    return null; \n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1170,
+        "y": 380,
+        "wires": [
+            [
+                "95647cd766e19d26"
+            ]
+        ]
+    },
+    {
+        "id": "95647cd766e19d26",
         "type": "ui_chart",
-        "z": "2f76ba572620725a",
-        "name": "ECG Chart",
+        "z": "05a84821d8d8a954",
+        "name": "Grafic ECG",
         "group": "1c66c2f3.68945d",
         "order": 5,
-        "width": 0,
-        "height": 0,
-        "label": "ECG",
+        "width": 20,
+        "height": "10",
+        "label": "ECG (mV)",
         "chartType": "line",
-        "legend": "true",
-        "xformat": "auto",
-        "nodata": "ECG graph",
-        "dot": true,
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "Aștept date ECG...",
+        "dot": false,
         "ymin": "",
         "ymax": "",
-        "removeOlder": "1",
-        "removeOlderPoints": "1000",
-        "removeOlderUnit": "60",
+        "removeOlder": "10",
+        "removeOlderPoints": "200",
+        "removeOlderUnit": "1",
         "cutout": "",
         "useOneColor": false,
         "useUTC": false,
         "colors": [
-            "#1f77b4",
+            "#1eb34b",
             "#aec7e8",
             "#ff7f0e",
             "#2ca02c",
@@ -69,18 +90,18 @@
         "y": 380,
         "wires": [
             [
-                "98d71a2d1866a193"
+                "7e46407966618965"
             ]
         ]
     },
     {
-        "id": "06462447d3c99dbe",
+        "id": "26a6848cc94368fc",
         "type": "mqtt in",
-        "z": "2f76ba572620725a",
-        "name": "BPM Data",
+        "z": "05a84821d8d8a954",
+        "name": "Date BPM",
         "topic": "sensorData/bpm",
         "qos": "0",
-        "datatype": "json",
+        "datatype": "utf8",
         "broker": "eba40148ecd07e6b",
         "nl": false,
         "rap": false,
@@ -90,16 +111,16 @@
         "y": 160,
         "wires": [
             [
-                "36fcf5e654e60f9c",
-                "f849032571aa8fc5"
+                "b5ab12d368badf03",
+                "3847e083e0f66112"
             ]
         ]
     },
     {
-        "id": "36fcf5e654e60f9c",
+        "id": "b5ab12d368badf03",
         "type": "ui_gauge",
-        "z": "2f76ba572620725a",
-        "name": "BPM Gauge",
+        "z": "05a84821d8d8a954",
+        "name": "Indicator BPM",
         "group": "1c66c2f3.68945d",
         "order": 1,
         "width": 6,
@@ -119,18 +140,18 @@
         "seg2": "",
         "diff": false,
         "className": "",
-        "x": 1170,
+        "x": 1450,
         "y": 160,
         "wires": []
     },
     {
-        "id": "baa6c4871fd3868c",
+        "id": "af6666bb0c38e6c5",
         "type": "mqtt in",
-        "z": "2f76ba572620725a",
-        "name": "SpO2 Data",
+        "z": "05a84821d8d8a954",
+        "name": "Date SpO2",
         "topic": "sensorData/spo2",
         "qos": "0",
-        "datatype": "json",
+        "datatype": "utf8",
         "broker": "eba40148ecd07e6b",
         "nl": false,
         "rap": false,
@@ -139,16 +160,16 @@
         "y": 300,
         "wires": [
             [
-                "27274a6e453de85f",
-                "c2367c3952d7b4c8"
+                "2303cf9584bc62fc",
+                "686188ceaf2fbcd7"
             ]
         ]
     },
     {
-        "id": "27274a6e453de85f",
+        "id": "2303cf9584bc62fc",
         "type": "ui_gauge",
-        "z": "2f76ba572620725a",
-        "name": "SpO2 Gauge",
+        "z": "05a84821d8d8a954",
+        "name": "Indicator SpO2",
         "group": "1c66c2f3.68945d",
         "order": 2,
         "width": 6,
@@ -164,18 +185,18 @@
         ],
         "seg1": "",
         "seg2": "",
-        "x": 1170,
+        "x": 1450,
         "y": 300,
         "wires": []
     },
     {
-        "id": "b7db33bad5b04536",
+        "id": "318be85921933c35",
         "type": "mqtt in",
-        "z": "2f76ba572620725a",
-        "name": "Lead Status",
+        "z": "05a84821d8d8a954",
+        "name": "Stare Electrozi",
         "topic": "sensorData/lead_off",
         "qos": "0",
-        "datatype": "auto-detect",
+        "datatype": "json",
         "broker": "eba40148ecd07e6b",
         "nl": false,
         "rap": false,
@@ -184,72 +205,37 @@
         "y": 560,
         "wires": [
             [
-                "b3bbfcd4435934c7",
-                "de3dd681cd76ac30"
+                "2ff89520806f1543",
+                "801510deb18675fa"
             ]
         ]
     },
     {
-        "id": "b3bbfcd4435934c7",
+        "id": "85e44d6daa417b42",
         "type": "ui_text",
-        "z": "2f76ba572620725a",
+        "z": "05a84821d8d8a954",
         "group": "1c66c2f3.68945d",
         "order": 3,
         "width": 8,
         "height": 3,
-        "name": "Lead Status Display",
-        "label": "Lead Status",
+        "name": "Afișare Stare Electrozi",
+        "label": "Stare Electrozi",
         "format": "{{msg.payload}}",
-        "layout": "row-spread",
+        "layout": "col-center",
         "className": "",
         "style": false,
         "font": "",
         "fontSize": "",
         "color": "#000000",
-        "x": 1200,
-        "y": 560,
+        "x": 1480,
+        "y": 600,
         "wires": []
     },
     {
-        "id": "094e1b7f603ba27b",
+        "id": "5be69650815989e0",
         "type": "debug",
-        "z": "2f76ba572620725a",
-        "name": "debug 2",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "",
-        "statusType": "auto",
-        "x": 1440,
-        "y": 460,
-        "wires": []
-    },
-    {
-        "id": "0787e289da81ee9a",
-        "type": "influxdb out",
-        "z": "2f76ba572620725a",
-        "influxdb": "01a698d92cc7ea4e",
-        "name": "Send to InfluxDB",
-        "measurement": "ecg",
-        "precision": "ms",
-        "retentionPolicy": "",
-        "database": "",
-        "precisionV18FluxV20": "ms",
-        "retentionPolicyV18Flux": "",
-        "org": "68ebf5bd92d1508b",
-        "bucket": "ECG",
-        "x": 1470,
-        "y": 420,
-        "wires": []
-    },
-    {
-        "id": "98d71a2d1866a193",
-        "type": "debug",
-        "z": "2f76ba572620725a",
-        "name": "debug 3",
+        "z": "05a84821d8d8a954",
+        "name": "Debug Intrare ECG",
         "active": false,
         "tosidebar": true,
         "console": false,
@@ -258,16 +244,173 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 1640,
+        "x": 1150,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "213ec39a893eb6ab",
+        "type": "influxdb out",
+        "z": "05a84821d8d8a954",
+        "influxdb": "01a698d92cc7ea4e",
+        "name": "Trimite tot la InfluxDB",
+        "measurement": "",
+        "precision": "ms",
+        "retentionPolicy": "",
+        "database": "",
+        "precisionV18FluxV20": "ms",
+        "retentionPolicyV18Flux": "",
+        "org": "68ebf5bd92d1508b",
+        "bucket": "ECG",
+        "x": 1470,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "7e46407966618965",
+        "type": "debug",
+        "z": "05a84821d8d8a954",
+        "name": "Debug Grafic ECG",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1660,
         "y": 380,
         "wires": []
     },
     {
-        "id": "f849032571aa8fc5",
+        "id": "3847e083e0f66112",
         "type": "function",
-        "z": "2f76ba572620725a",
-        "name": "Format BPM Data",
-        "func": "// Prepare the payload for InfluxDB\nmsg.payload = [\n    {\n        measurement: \"bpm\",\n        fields: {\n            value: parseFloat(msg.payload) // Convert string to float\n        },\n        timestamp: Date.now() * 1000000 // Use current timestamp in nanoseconds\n    }\n];\nreturn msg;",
+        "z": "05a84821d8d8a954",
+        "name": "Formatează BPM pentru Influx",
+        "func": "// msg.payload ar trebui să fie un string (ex: \"115.00\" sau \"Error\")\nlet rawValue = msg.payload;\nlet bpmValue = parseFloat(rawValue);\n\n// Verifică dacă parseFloat a returnat un număr valid\nif (isNaN(bpmValue)) {\n    node.warn(\"Valoare BPM invalidă sau nenumerică: \" + rawValue);\n    return null; // Oprește procesarea dacă nu e valid\n}\n\n// Dacă ajungem aici, bpmValue este valid\nmsg.measurement = \"bpm\";\nmsg.payload = {\n    value: bpmValue // Folosește valoarea numerică\n};\nmsg.tags = {\n    device: \"esp32\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1170,
+        "y": 160,
+        "wires": [
+            [
+                "213ec39a893eb6ab"
+            ]
+        ]
+    },
+    {
+        "id": "686188ceaf2fbcd7",
+        "type": "function",
+        "z": "05a84821d8d8a954",
+        "name": "Formatează SpO2 pentru Influx",
+        "func": "// msg.payload ar trebui să fie un string (ex: \"99.00\" sau \"Error\")\nlet rawValue = msg.payload;\nlet spo2Value = parseFloat(rawValue);\n\n// Verifică dacă parseFloat a returnat un număr valid\nif (isNaN(spo2Value)) {\n    node.warn(\"Valoare SpO2 invalidă sau nenumerică: \" + rawValue);\n    return null; // Oprește procesarea dacă nu e valid\n}\n\n// Dacă ajungem aici, spo2Value este valid\nmsg.measurement = \"spo2\";\nmsg.payload = {\n    value: spo2Value // Folosește valoarea numerică\n};\nmsg.tags = {\n    device: \"esp32\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1170,
+        "y": 300,
+        "wires": [
+            [
+                "213ec39a893eb6ab"
+            ]
+        ]
+    },
+    {
+        "id": "2ff89520806f1543",
+        "type": "function",
+        "z": "05a84821d8d8a954",
+        "name": "Formatează Stare Electrozi pentru Influx",
+        "func": "// msg.payload = {\"description\": \"Leads Connected\", \"code\": 0}\nif (msg.payload && typeof msg.payload === 'object' && \n    typeof msg.payload.description === 'string' && \n    typeof msg.payload.code === 'number') {\n    msg.measurement = \"lead_status\";\n    msg.payload = {\n        description: msg.payload.description, // Stochează textul descriptiv\n        code: msg.payload.code              // Stochează codul numeric\n    };\n    msg.tags = {\n        device: \"esp32\"\n    };\n    return msg;\n} else {\n    node.warn(\"Format stare electrozi invalid pentru InfluxDB: \" + JSON.stringify(msg.payload));\n    return null;\n}",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1190,
+        "y": 520,
+        "wires": [
+            [
+                "213ec39a893eb6ab"
+            ]
+        ]
+    },
+    {
+        "id": "801510deb18675fa",
+        "type": "function",
+        "z": "05a84821d8d8a954",
+        "name": "Formatează Stare Electrozi pentru UI",
+        "func": "// msg.payload = {\"description\": \"Leads Connected\", \"code\": 0}\nif (msg.payload && typeof msg.payload === 'object' && typeof msg.payload.description === 'string') {\n    msg.payload = msg.payload.description; // Folosește textul pentru UI\n} else {\n    msg.payload = \"Stare electrozi: necunoscută\";\n}\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1180,
+        "y": 600,
+        "wires": [
+            [
+                "85e44d6daa417b42"
+            ]
+        ]
+    },
+    {
+        "id": "46e8ba70261b0921",
+        "type": "function",
+        "z": "05a84821d8d8a954",
+        "name": "Formatează ECG pentru Influx",
+        "func": "let ecgValue = parseFloat(msg.payload);\n\nif (isNaN(ecgValue)) {\n    node.warn(\"Valoare ECG invalidă: \" + msg.payload);\n    return null;\n}\n\nmsg.measurement = \"ecg\";\nmsg.payload = {\n    value: ecgValue\n};\nmsg.tags = {\n    device: \"esp32\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1170,
+        "y": 420,
+        "wires": [
+            [
+                "213ec39a893eb6ab"
+            ]
+        ]
+    },
+    {
+        "id": "328c5ac9f7728bb0",
+        "type": "mqtt in",
+        "z": "05a84821d8d8a954",
+        "name": "Buton Apăsat",
+        "topic": "sensorData/button",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "eba40148ecd07e6b",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 910,
+        "y": 680,
+        "wires": [
+            [
+                "fd2cd6b8ae94944c",
+                "e9f8de1aba97c8e6",
+                "b07704f077a77e1a"
+            ]
+        ]
+    },
+    {
+        "id": "b07704f077a77e1a",
+        "type": "function",
+        "z": "05a84821d8d8a954",
+        "name": "Formatează Buton pentru UI",
+        "func": "// msg.payload = {\"description\": \"The patient pressed the button\", \"state_code\": 1}\nif (msg.payload && typeof msg.payload === 'object' && typeof msg.payload.description === 'string') {\n    msg.payload = msg.payload.description; // Folosește textul pentru UI\n} else {\n    msg.payload = \"Alertă: necunoscută\"; // Fallback pentru UI\n}\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -275,116 +418,70 @@
         "finalize": "",
         "libs": [],
         "x": 1190,
-        "y": 200,
+        "y": 640,
         "wires": [
             [
-                "52108081bf3c80ab"
+                "f04c644711f7ac61"
             ]
         ]
     },
     {
-        "id": "c2367c3952d7b4c8",
-        "type": "function",
-        "z": "2f76ba572620725a",
-        "name": "Format SpO2 Data",
-        "func": "// Prepare the payload for InfluxDB\nmsg.payload = [\n    {\n        measurement: \"spo2\",\n        fields: {\n            value: parseFloat(msg.payload) // Convert string to float\n        },\n        timestamp: Date.now() * 1000000 // Use current timestamp in nanoseconds\n    }\n];\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1190,
-        "y": 340,
-        "wires": [
-            [
-                "cc0b6b258978c9d8"
-            ]
-        ]
-    },
-    {
-        "id": "de3dd681cd76ac30",
-        "type": "function",
-        "z": "2f76ba572620725a",
-        "name": "Format Lead Status Data",
-        "func": "// Prepare the payload for InfluxDB\nmsg.payload = [\n    {\n        measurement: \"lead_status\",\n        fields: {\n            status: msg.payload // Use the lead status string\n        },\n        timestamp: Date.now() * 1000000 // Use current timestamp in nanoseconds\n    }\n];\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1210,
-        "y": 620,
-        "wires": [
-            [
-                "74616e47684e1ac4"
-            ]
-        ]
-    },
-    {
-        "id": "74616e47684e1ac4",
-        "type": "influxdb out",
-        "z": "2f76ba572620725a",
-        "influxdb": "01a698d92cc7ea4e",
-        "name": "Send to InfluxDB",
-        "measurement": "lead",
-        "precision": "ms",
-        "retentionPolicy": "",
-        "database": "",
-        "precisionV18FluxV20": "ms",
-        "retentionPolicyV18Flux": "",
-        "org": "68ebf5bd92d1508b",
-        "bucket": "ECG",
-        "x": 1470,
-        "y": 620,
-        "wires": []
-    },
-    {
-        "id": "52108081bf3c80ab",
-        "type": "influxdb out",
-        "z": "2f76ba572620725a",
-        "influxdb": "01a698d92cc7ea4e",
-        "name": "Send to InfluxDB",
-        "measurement": "bpm",
-        "precision": "ms",
-        "retentionPolicy": "",
-        "database": "",
-        "precisionV18FluxV20": "ms",
-        "retentionPolicyV18Flux": "",
-        "org": "68ebf5bd92d1508b",
-        "bucket": "ECG",
-        "x": 1470,
-        "y": 200,
-        "wires": []
-    },
-    {
-        "id": "cc0b6b258978c9d8",
-        "type": "influxdb out",
-        "z": "2f76ba572620725a",
-        "influxdb": "01a698d92cc7ea4e",
-        "name": "Send to InfluxDB",
-        "measurement": "spo2",
-        "precision": "ms",
-        "retentionPolicy": "",
-        "database": "",
-        "precisionV18FluxV20": "ms",
-        "retentionPolicyV18Flux": "",
-        "org": "68ebf5bd92d1508b",
-        "bucket": "ECG",
-        "x": 1470,
-        "y": 340,
-        "wires": []
-    },
-    {
-        "id": "bae69cb744df4ae2",
-        "type": "ui_spacer",
-        "z": "2f76ba572620725a",
-        "name": "spacer",
+        "id": "f04c644711f7ac61",
+        "type": "ui_text",
+        "z": "05a84821d8d8a954",
         "group": "1c66c2f3.68945d",
         "order": 4,
         "width": 8,
-        "height": 1
+        "height": 1,
+        "name": "Afișare Alertă Buton",
+        "label": "Alertă pacient",
+        "format": "{{msg.payload}}",
+        "layout": "col-center",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#ff0000",
+        "x": 1480,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "fd2cd6b8ae94944c",
+        "type": "function",
+        "z": "05a84821d8d8a954",
+        "name": "Formatează Buton pentru Influx",
+        "func": "// msg.payload = {\"description\": \"The patient pressed the button\", \"state_code\": 1}\nif (msg.payload && typeof msg.payload === 'object' && \n    typeof msg.payload.description === 'string' && \n    typeof msg.payload.state_code === 'number') {\n    msg.measurement = \"button_event\"; // Nume măsurare schimbat pentru claritate\n    msg.payload = {\n        description: msg.payload.description, // Stochează textul descriptiv\n        state_code: msg.payload.state_code    // Stochează codul numeric\n    };\n    msg.tags = {\n        device: \"esp32\",\n        type: \"manual_alert\"\n    };\n    return msg;\n} else {\n    node.warn(\"Format payload buton invalid pentru InfluxDB: \" + JSON.stringify(msg.payload));\n    return null;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1190,
+        "y": 720,
+        "wires": [
+            [
+                "213ec39a893eb6ab"
+            ]
+        ]
+    },
+    {
+        "id": "e9f8de1aba97c8e6",
+        "type": "debug",
+        "z": "05a84821d8d8a954",
+        "name": "Debug Intrare Buton",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1150,
+        "y": 760,
+        "wires": []
     },
     {
         "id": "eba40148ecd07e6b",
@@ -420,7 +517,7 @@
     {
         "id": "1c66c2f3.68945d",
         "type": "ui_group",
-        "name": "Sensor Data",
+        "name": "Date Senzori",
         "tab": "bd33a5f2.7d4b28",
         "order": 1,
         "disp": true,
@@ -435,7 +532,7 @@
         "port": 8086,
         "protocol": "http",
         "database": "database",
-        "name": "InfluxDB connection",
+        "name": "Conexiune InfluxDB",
         "usetls": false,
         "tls": "",
         "influxdbVersion": "2.0",
@@ -446,7 +543,7 @@
     {
         "id": "bd33a5f2.7d4b28",
         "type": "ui_tab",
-        "name": "Sensor Dashboard",
+        "name": "Dashboard senzori",
         "icon": "dashboard",
         "order": 1
     }
