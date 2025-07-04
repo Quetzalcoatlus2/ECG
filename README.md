@@ -1,5 +1,5 @@
 # ECG
-This project implements a real-time ECG monitoring system using an ESP32 microcontroller and an AD8232 ECG sensor. The ESP32 reads analog ECG signals via its ADC, processes the data, and publishes it over MQTT using a Wi-Fi connection. In addition to ECG waveform data, the ESP32 can also transmit heart rate (BPM), SpO₂ (via MAX30102 if used), and lead-off detection information on separate MQTT topics.
+This project implements a real-time ECG monitoring system using an ESP32 microcontroller and an AD8232 ECG sensor. The ESP32 reads analog ECG signals via its ADC, processes the data, and publishes it over MQTT using a Wi-Fi connection. In addition to ECG waveform data, the ESP32 transmits heart rate (BPM), SpO₂ (via GY-MAX30102), and lead-off detection information on separate MQTT topics.
 
 The backend of the system is powered by Node-RED, which subscribes to these MQTT topics using a JSON-based flow. This flow:
 
