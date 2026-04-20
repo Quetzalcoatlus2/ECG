@@ -9,39 +9,39 @@
 #include <math.h> // Math library, required for PI constant
 
 // ADC reference voltage
-const float TENSIUNE_REFERINTA_ADC = 0.0033; // ADC reference voltage in Volts (3.3V); using 0.0033 for correct Grafana representation
-const float VALOARE_MAX_ADC = 4095.0; // Maximum value for 12-bit ADC (2^12 - 1)
+const float ADC_REFERENCE_VOLTAGE = 0.0033; // ADC reference voltage in Volts (3.3V); using 0.0033 for correct Grafana representation
+const float ADC_MAX_VALUE = 4095.0; // Maximum value for 12-bit ADC (2^12 - 1)
 
 // ECG filter parameters
-const float FRECVENTA_ESANTIONARE = 200.0; // Frequency used to read the ECG signal (Hz)
-const float TIMP_ESANTIONARE = 1.0 / FRECVENTA_ESANTIONARE; // Sampling period, calculated from frequency
-const float FRECVENTA_TAIERE_FTJ = 25.0; // Cutoff frequency for the low-pass filter (removes high-frequency noise)
-const float RC_FTJ = 1.0 / (2.0 * PI * FRECVENTA_TAIERE_FTJ); // Time constant for LPF
-const float ALFA_FTJ = TIMP_ESANTIONARE / (RC_FTJ + TIMP_ESANTIONARE); // Smoothing factor for LPF
-volatile float iesire_ftj_anterioara = 0.0; // Stores previous LPF output value
+const float SAMPLING_FREQUENCY = 200.0; // Frequency used to read the ECG signal (Hz)
+const float SAMPLING_PERIOD = 1.0 / SAMPLING_FREQUENCY; // Sampling period, calculated from frequency
+const float LPF_CUTOFF_FREQUENCY = 25.0; // Cutoff frequency for the low-pass filter (removes high-frequency noise)
+const float LPF_RC = 1.0 / (2.0 * PI * LPF_CUTOFF_FREQUENCY); // Time constant for LPF
+const float LPF_ALPHA = SAMPLING_PERIOD / (LPF_RC + SAMPLING_PERIOD); // Smoothing factor for LPF
+volatile float previous_lpf_output = 0.0; // Stores previous LPF output value
 
-const float FRECVENTA_TAIERE_FTS = 0.5; // Cutoff frequency for the high-pass filter (removes DC component)
-const float RC_FTS = 1.0 / (2.0 * PI * FRECVENTA_TAIERE_FTS); // Time constant for HPF
-const float ALFA_FTS = RC_FTS / (RC_FTS + TIMP_ESANTIONARE); // Smoothing factor for HPF
-volatile float iesire_fts_anterioara = 0.0; // Stores previous HPF output value
-volatile float intrare_fts_anterioara = 0.0; // Stores previous HPF input value
+const float HPF_CUTOFF_FREQUENCY = 0.5; // Cutoff frequency for the high-pass filter (removes DC component)
+const float HPF_RC = 1.0 / (2.0 * PI * HPF_CUTOFF_FREQUENCY); // Time constant for HPF
+const float HPF_ALPHA = HPF_RC / (HPF_RC + SAMPLING_PERIOD); // Smoothing factor for HPF
+volatile float previous_hpf_output = 0.0; // Stores previous HPF output value
+volatile float previous_hpf_input = 0.0; // Stores previous HPF input value
 
-volatile float ecg_filtrat_curent_mv = 0.0; // Current filtered ECG signal value, in millivolts
-volatile bool ecg_pregatit_pentru_trimitere = false; // Flag indicating whether a new ECG value is ready to send
+volatile float current_filtered_ecg_mv = 0.0; // Current filtered ECG signal value, in millivolts
+volatile bool ecg_ready_to_send = false; // Flag indicating whether a new ECG value is ready to send
 
-#define NR_MEDII_ECG 8 // Number of ECG samples used for moving average
-float istoric_ecg[NR_MEDII_ECG]; // Array to store latest ECG values
-int index_istoric_ecg = 0; // Current index in ECG history array
-bool istoric_ecg_plin = false; // Flag indicating whether history array is full
-float ecg_medie_pentru_trimitere = 0.0; // Average ECG value to be sent via MQTT
+#define ECG_AVERAGE_SAMPLE_COUNT 8 // Number of ECG samples used for moving average
+float ecg_history[ECG_AVERAGE_SAMPLE_COUNT]; // Array to store latest ECG values
+int ecg_history_index = 0; // Current index in ECG history array
+bool is_ecg_history_full = false; // Flag indicating whether history array is full
+float ecg_average_for_send = 0.0; // Average ECG value to be sent via MQTT
 
-#define NR_MEDII_BPM 5 // Number of BPM samples used for moving average
-float istoric_bpm[NR_MEDII_BPM]; // Array to store latest BPM values
-int index_istoric_bpm = 0; // Current index in BPM history array
-bool istoric_bpm_plin = false; // Flag indicating whether history array is full
-float bpm_medie_pentru_trimitere = 0.0; // Average BPM value to be sent
+#define BPM_AVERAGE_SAMPLE_COUNT 5 // Number of BPM samples used for moving average
+float bpm_history[BPM_AVERAGE_SAMPLE_COUNT]; // Array to store latest BPM values
+int bpm_history_index = 0; // Current index in BPM history array
+bool is_bpm_history_full = false; // Flag indicating whether history array is full
+float bpm_average_for_send = 0.0; // Average BPM value to be sent
 
-#define PRAG_IR_DEGET 50000 // Minimum IR signal value to consider that a finger is on the sensor
+#define FINGER_IR_THRESHOLD 50000 // Minimum IR signal value to consider that a finger is on the sensor
 #define MIN_BPM 30.0 // Minimum acceptable BPM value
 #define MAX_BPM 220.0 // Maximum acceptable BPM value
 #define MIN_SPO2 70.0 // Minimum acceptable SpO2 value
@@ -54,207 +54,207 @@ float bpm_medie_pentru_trimitere = 0.0; // Average BPM value to be sent
 #define PIN_LO_PLUS 32 // Pin for detecting positive electrode contact, LA (Leads-Off+)
 #define PIN_LO_MINUS 33 // Pin for detecting negative electrode contact, RA (Leads-Off-)
 
-#define PIN_BUTON 14 // Pin for panic button
+#define PIN_BUTTON 14 // Pin for panic button
 #define PIN_BUZZER 26 // Pin for alarm buzzer
-#define FRECV_BUZZER 2000 // Frequency of buzzer sound (Hz)
+#define BUZZER_FREQUENCY 2000 // Frequency of buzzer sound (Hz)
 
-const char* SSID_WIFI = "Device"; // WiFi network name
-const char* PAROLA_WIFI = "46503190"; // WiFi network password
+const char* WIFI_SSID = "Device"; // WiFi network name
+const char* WIFI_PASSWORD = "46503190"; // WiFi network password
 const char* SERVER_MQTT = "192.168.220.144"; // IP address of MQTT broker (Raspberry Pi)
 const int PORT_MQTT = 1883; // Standard MQTT port
-const char* UTILIZATOR_MQTT = "pi"; // Username for MQTT authentication
-const char* PAROLA_MQTT = "Mariuspi"; // Password for MQTT authentication
+const char* MQTT_USERNAME = "pi"; // Username for MQTT authentication
+const char* MQTT_PASSWORD = "Mariuspi"; // Password for MQTT authentication
 
 // MQTT TOPICS for Node-RED
 #define TOPIC_BPM "sensorData/bpm"
 #define TOPIC_SPO2 "sensorData/spo2"
 #define TOPIC_ECG "sensorData/ecg"
-#define TOPIC_ELECTROZI "sensorData/lead_off"
-#define TOPIC_BUTON "sensorData/button"
+#define TOPIC_LEAD_OFF "sensorData/lead_off"
+#define TOPIC_BUTTON "sensorData/button"
 
 // Buffer for raw MAX30102 data
-#define NR_ESANTIOANE_MAX30102 50 // Number of samples collected from MAX30102 before processing
-uint32_t buffer_ir[NR_ESANTIOANE_MAX30102]; // Buffer for infrared (IR) values
-uint32_t buffer_rosu[NR_ESANTIOANE_MAX30102]; // Buffer for red LED values
+#define MAX30102_SAMPLE_COUNT 50 // Number of samples collected from MAX30102 before processing
+uint32_t buffer_ir[MAX30102_SAMPLE_COUNT]; // Buffer for infrared (IR) values
+uint32_t red_buffer[MAX30102_SAMPLE_COUNT]; // Buffer for red LED values
 int32_t spo2; // Variable to store calculated SpO2 value
 int8_t spo2_valid; // Flag indicating whether SpO2 value is valid
-int32_t puls; // Variable to store calculated pulse value
-int8_t puls_valid; // Flag indicating whether pulse value is valid
+int32_t pulse; // Variable to store calculated pulse value
+int8_t is_pulse_valid; // Flag indicating whether pulse value is valid
 
 // Global state for non-blocking MAX30102 collection
-volatile bool colectare_max_in_curs = false; // Flag indicating whether data is being collected from MAX30102
-volatile int nr_esantioane_colectate = 0; // Counter for number of collected samples
+volatile bool is_max_collection_in_progress = false; // Flag indicating whether data is being collected from MAX30102
+volatile int collected_sample_count = 0; // Counter for number of collected samples
 
-MAX30105 senzor_puls; // Object for pulse sensor (MAX30105 class from library)
-float bpm_curent = 0.0; // Current BPM value, before averaging
-float spo2_curent = 0.0; // Current SpO2 value
-volatile bool electrozi_lo_plus = false; // Current state of positive electrode
-volatile bool electrozi_lo_minus = false; // Current state of negative electrode
+MAX30105 pulse_sensor; // Object for pulse sensor (MAX30105 class from library)
+float current_bpm = 0.0; // Current BPM value, before averaging
+float current_spo2 = 0.0; // Current SpO2 value
+volatile bool lead_off_plus = false; // Current state of positive electrode
+volatile bool lead_off_minus = false; // Current state of negative electrode
 
-WiFiClient client_wifi; // WiFi client object
-PubSubClient client_mqtt(client_wifi); // MQTT client object using WiFi client
+WiFiClient wifi_client; // WiFi client object
+PubSubClient mqtt_client(wifi_client); // MQTT client object using WiFi client
 
-unsigned long ultimul_timp_trimitere = 0; // Stores timestamp of last sensor data send (BPM/SpO2)
-const unsigned long interval_alti_senzori = 5000; // Interval in milliseconds for sending data (5 seconds)
+unsigned long last_send_time = 0; // Stores timestamp of last sensor data send (BPM/SpO2)
+const unsigned long other_sensor_interval = 5000; // Interval in milliseconds for sending data (5 seconds)
 
-unsigned long ultimul_timp_debounce = 0; // Stores timestamp of last button state change
+unsigned long last_debounce_time = 0; // Stores timestamp of last button state change
 const unsigned long debounce_ms = 50; // Debounce time for button (avoids multiple reads)
-int stare_buton_anterioara = HIGH; // Previous button state (HIGH = not pressed)
-int stare_buton_curenta = HIGH; // Current button state
-bool buton_activ = false; // Flag indicating whether button alarm is active
+int previous_button_state = HIGH; // Previous button state (HIGH = not pressed)
+int current_button_state = HIGH; // Current button state
+bool is_button_alarm_active = false; // Flag indicating whether button alarm is active
 
-esp_timer_handle_t timer_ecg; // Handle (identifier) for ECG high-precision timer
+esp_timer_handle_t ecg_timer; // Handle (identifier) for ECG high-precision timer
 
 // Function declarations (prototypes)
-void conectare_MQTT();
-void procesare_max30102();
-void trimite_ECG_MQTT();
-void trimite_non_ECG_MQTT();
+void connect_MQTT();
+void process_max30102();
+void send_ECG_MQTT();
+void send_non_ECG_MQTT();
 void callback_timer_ecg(void* arg);
 
 // Constants for ECG moving average
-const int numarValoriMedieECG = 20;
-float valoriECG[numarValoriMedieECG];
+const int ecgAverageValueCount = 20;
+float ecgValues[ecgAverageValueCount];
 
-void conectare_MQTT() {
+void connect_MQTT() {
   Serial.print("Attempting MQTT connection...");
-  String id_client = "ESP32Client-"; // Creates a unique client ID
-  id_client += String(random(0xffff), HEX);
-  int incercari = 0;
-  while (!client_mqtt.connected() && incercari < 5) { // Attempts to connect 5 times
+  String client_id = "ESP32Client-"; // Creates a unique client ID
+  client_id += String(random(0xffff), HEX);
+  int attempts = 0;
+  while (!mqtt_client.connected() && attempts < 5) { // Attempts to connect 5 times
     Serial.print("\nAttempt ");
-    Serial.print(incercari + 1);
+    Serial.print(attempts + 1);
     Serial.print(" to MQTT broker: ");
     Serial.println(SERVER_MQTT);
-    if (client_mqtt.connect(id_client.c_str(), UTILIZATOR_MQTT, PAROLA_MQTT)) { // Connect with ID, username, and password
+    if (mqtt_client.connect(client_id.c_str(), MQTT_USERNAME, MQTT_PASSWORD)) { // Connect with ID, username, and password
       Serial.println("Connected to MQTT");
     } else {
       Serial.print("MQTT connection failed, rc=");
-      Serial.print(client_mqtt.state()); // Displays error code
+      Serial.print(mqtt_client.state()); // Displays error code
       Serial.println(" retry in 5 seconds");
       delay(5000); // Waits 5 seconds before retrying
     }
-    incercari++;
+    attempts++;
   }
-  if (!client_mqtt.connected()) {
+  if (!mqtt_client.connected()) {
     Serial.println("Could not connect to MQTT broker after multiple attempts.");
   }
 }
 
 // Non-blocking MAX30102 processing
-void procesare_max30102() {
-    if (!colectare_max_in_curs) { // Runs only if a collection is in progress
+void process_max30102() {
+    if (!is_max_collection_in_progress) { // Runs only if a collection is in progress
         return;
     }
-    if (nr_esantioane_colectate < NR_ESANTIOANE_MAX30102) { // Checks whether buffer is not full
-        if (senzor_puls.available()) { // Checks whether new data exists in sensor FIFO
-            buffer_rosu[nr_esantioane_colectate] = senzor_puls.getFIFORed(); // Reads Red value
-            buffer_ir[nr_esantioane_colectate] = senzor_puls.getFIFOIR(); // Reads IR value
-            senzor_puls.nextSample(); // Moves to next FIFO sample
-            nr_esantioane_colectate++; // Increments sample counter
+    if (collected_sample_count < MAX30102_SAMPLE_COUNT) { // Checks whether buffer is not full
+        if (pulse_sensor.available()) { // Checks whether new data exists in sensor FIFO
+            red_buffer[collected_sample_count] = pulse_sensor.getFIFORed(); // Reads Red value
+            buffer_ir[collected_sample_count] = pulse_sensor.getFIFOIR(); // Reads IR value
+            pulse_sensor.nextSample(); // Moves to next FIFO sample
+            collected_sample_count++; // Increments sample counter
 
-            if (nr_esantioane_colectate >= NR_ESANTIOANE_MAX30102) { // If buffer is full
+            if (collected_sample_count >= MAX30102_SAMPLE_COUNT) { // If buffer is full
                 // Calculates SpO2 and pulse using buffer data
-                maxim_heart_rate_and_oxygen_saturation(buffer_ir, NR_ESANTIOANE_MAX30102, buffer_rosu, &spo2, &spo2_valid, &puls, &puls_valid);
+                maxim_heart_rate_and_oxygen_saturation(buffer_ir, MAX30102_SAMPLE_COUNT, red_buffer, &spo2, &spo2_valid, &pulse, &is_pulse_valid);
 
                 if (spo2_valid && spo2 >= MIN_SPO2 && spo2 <= MAX_SPO2) { // Validates SpO2
-                    spo2_curent = (float)spo2;
+                    current_spo2 = (float)spo2;
                 } else {
-                    spo2_curent = 0.0; // Sets to 0 if invalid
+                    current_spo2 = 0.0; // Sets to 0 if invalid
                 }
 
-                if (puls_valid && puls >= MIN_BPM && puls <= MAX_BPM) { // Validates pulse
-                    bpm_curent = (float)puls;
+                if (is_pulse_valid && pulse >= MIN_BPM && pulse <= MAX_BPM) { // Validates pulse
+                    current_bpm = (float)pulse;
                 } else {
-                    bpm_curent = 0.0; // Sets to 0 if invalid
+                    current_bpm = 0.0; // Sets to 0 if invalid
                 }
-                colectare_max_in_curs = false; // Stops collection flag
+                is_max_collection_in_progress = false; // Stops collection flag
             }
         }
     }
 }
 
-void trimite_ECG_MQTT() {
-  if (!client_mqtt.connected()) { // Checks MQTT connection
+void send_ECG_MQTT() {
+  if (!mqtt_client.connected()) { // Checks MQTT connection
     return;
   }
-  float esantion_ecg = ecg_filtrat_curent_mv; // Gets latest filtered ECG value
-  istoric_ecg[index_istoric_ecg] = esantion_ecg; // Adds value to average history
-  index_istoric_ecg = (index_istoric_ecg + 1) % NR_MEDII_ECG; // Updates circular index
-  if (!istoric_ecg_plin && index_istoric_ecg == 0) {
-    istoric_ecg_plin = true; // Marks history as full
+  float ecg_sample = current_filtered_ecg_mv; // Gets latest filtered ECG value
+  ecg_history[ecg_history_index] = ecg_sample; // Adds value to average history
+  ecg_history_index = (ecg_history_index + 1) % ECG_AVERAGE_SAMPLE_COUNT; // Updates circular index
+  if (!is_ecg_history_full && ecg_history_index == 0) {
+    is_ecg_history_full = true; // Marks history as full
   }
 
-  if (istoric_ecg_plin) { // Calculates average if history is full
-    float suma = 0;
-    for (int i = 0; i < NR_MEDII_ECG; i++) {
-      suma += istoric_ecg[i];
+  if (is_ecg_history_full) { // Calculates average if history is full
+    float sum = 0;
+    for (int i = 0; i < ECG_AVERAGE_SAMPLE_COUNT; i++) {
+      sum += ecg_history[i];
     }
-    ecg_medie_pentru_trimitere = suma / NR_MEDII_ECG;
+    ecg_average_for_send = sum / ECG_AVERAGE_SAMPLE_COUNT;
   } else { // Otherwise, use current value
-    ecg_medie_pentru_trimitere = esantion_ecg;
+    ecg_average_for_send = ecg_sample;
   }
 
   char payload_ecg[20]; // Buffer for MQTT payload
-  dtostrf(ecg_medie_pentru_trimitere, 8, 5, payload_ecg); // Converts float value to string with 5 decimals
+  dtostrf(ecg_average_for_send, 8, 5, payload_ecg); // Converts float value to string with 5 decimals
   payload_ecg[19] = '\0'; // Ensures proper string termination
-  if (!client_mqtt.publish(TOPIC_ECG, payload_ecg)) { // Publishes on ECG topic
+  if (!mqtt_client.publish(TOPIC_ECG, payload_ecg)) { // Publishes on ECG topic
     Serial.println("ECG MQTT send failed");
   }
 }
 
-void trimite_non_ECG_MQTT() {
-  if (!client_mqtt.connected()) { // Checks MQTT connection
+void send_non_ECG_MQTT() {
+  if (!mqtt_client.connected()) { // Checks MQTT connection
     return;
   }
   char payload_numeric[20]; // Buffer for numeric payloads
 
   // Update and calculate BPM moving average
-  istoric_bpm[index_istoric_bpm] = bpm_curent; // Adds current BPM value to history
-  index_istoric_bpm = (index_istoric_bpm + 1) % NR_MEDII_BPM; // Updates circular index
-  if (!istoric_bpm_plin && index_istoric_bpm == 0) {
-    istoric_bpm_plin = true; // Marks history as full
+  bpm_history[bpm_history_index] = current_bpm; // Adds current BPM value to history
+  bpm_history_index = (bpm_history_index + 1) % BPM_AVERAGE_SAMPLE_COUNT; // Updates circular index
+  if (!is_bpm_history_full && bpm_history_index == 0) {
+    is_bpm_history_full = true; // Marks history as full
   }
 
-  float suma_bpm_calc = 0.0;
+  float bpm_sum_calc = 0.0;
   int count_samples_for_avg = 0;
 
-  if (istoric_bpm_plin) { // Calculates average if history is full
-    for (int i = 0; i < NR_MEDII_BPM; i++) {
-      suma_bpm_calc += istoric_bpm[i];
+  if (is_bpm_history_full) { // Calculates average if history is full
+    for (int i = 0; i < BPM_AVERAGE_SAMPLE_COUNT; i++) {
+      bpm_sum_calc += bpm_history[i];
     }
-    count_samples_for_avg = NR_MEDII_BPM;
+    count_samples_for_avg = BPM_AVERAGE_SAMPLE_COUNT;
   } else { // Otherwise, calculates average on available samples
-    for (int i = 0; i < index_istoric_bpm; i++) {
-      suma_bpm_calc += istoric_bpm[i];
+    for (int i = 0; i < bpm_history_index; i++) {
+      bpm_sum_calc += bpm_history[i];
     }
-    count_samples_for_avg = index_istoric_bpm;
+    count_samples_for_avg = bpm_history_index;
   }
 
   if (count_samples_for_avg > 0) {
-    bpm_medie_pentru_trimitere = suma_bpm_calc / count_samples_for_avg;
+    bpm_average_for_send = bpm_sum_calc / count_samples_for_avg;
   } else {
-    bpm_medie_pentru_trimitere = bpm_curent; // Uses current value if no samples are available for average
+    bpm_average_for_send = current_bpm; // Uses current value if no samples are available for average
   }
 
   // BPM
-  sprintf(payload_numeric, "%.2f", bpm_medie_pentru_trimitere); // Formats BPM value with 2 decimals
-  client_mqtt.publish(TOPIC_BPM, payload_numeric); // Publishes on BPM topic
+  sprintf(payload_numeric, "%.2f", bpm_average_for_send); // Formats BPM value with 2 decimals
+  mqtt_client.publish(TOPIC_BPM, payload_numeric); // Publishes on BPM topic
 
   // SpO2
-  sprintf(payload_numeric, "%.2f", spo2_curent); // Formats SpO2 value with 2 decimals
-  client_mqtt.publish(TOPIC_SPO2, payload_numeric); // Publishes on SpO2 topic
+  sprintf(payload_numeric, "%.2f", current_spo2); // Formats SpO2 value with 2 decimals
+  mqtt_client.publish(TOPIC_SPO2, payload_numeric); // Publishes on SpO2 topic
 
   // Electrode status (Lead status) in JSON format
   String lead_status_description = "";
   int lead_status_code = 0;
-  if (electrozi_lo_plus && electrozi_lo_minus) {
+  if (lead_off_plus && lead_off_minus) {
     lead_status_description = "Both electrodes are disconnected.";
     lead_status_code = 3;
-  } else if (electrozi_lo_plus) {
+  } else if (lead_off_plus) {
     lead_status_description = "LA electrode is disconnected.";
     lead_status_code = 1;
-  } else if (electrozi_lo_minus) {
+  } else if (lead_off_minus) {
     lead_status_description = "RA electrode is disconnected.";
     lead_status_code = 2;
   } else {
@@ -262,53 +262,53 @@ void trimite_non_ECG_MQTT() {
     lead_status_code = 0;
   }
   String lead_status_payload_json = "{\"description\":\"" + lead_status_description + "\", \"code\":" + String(lead_status_code) + "}"; // Creates JSON payload
-  client_mqtt.publish(TOPIC_ELECTROZI, lead_status_payload_json.c_str()); // Publishes on electrode topic
+  mqtt_client.publish(TOPIC_LEAD_OFF, lead_status_payload_json.c_str()); // Publishes on electrode topic
 }
 
 // Timer callback function, runs at each ECG sample
 void callback_timer_ecg(void* arg) {
-  int valoare_adc = analogRead(PIN_ECG); // Reads raw value from ADC
-  float tensiune = (valoare_adc / VALOARE_MAX_ADC) * TENSIUNE_REFERINTA_ADC; // Converts to voltage
-  float iesire_ftj = ALFA_FTJ * tensiune + (1 - ALFA_FTJ) * iesire_ftj_anterioara; // Applies low-pass filter
-  iesire_ftj_anterioara = iesire_ftj; // Saves filter state
-  float iesire_fts = ALFA_FTS * (iesire_fts_anterioara + iesire_ftj - intrare_fts_anterioara); // Applies high-pass filter
-  intrare_fts_anterioara = iesire_ftj; // Saves filter state
-  iesire_fts_anterioara = iesire_fts; // Saves filter state
-  ecg_filtrat_curent_mv = iesire_fts * 1000.0; // Converts filtered voltage to millivolts
-  ecg_pregatit_pentru_trimitere = true; // Sets flag for sending
-  electrozi_lo_plus = digitalRead(PIN_LO_PLUS); // Reads + electrode state
-  electrozi_lo_minus = digitalRead(PIN_LO_MINUS); // Reads - electrode state
+  int adc_value = analogRead(PIN_ECG); // Reads raw value from ADC
+  float voltage = (adc_value / ADC_MAX_VALUE) * ADC_REFERENCE_VOLTAGE; // Converts to voltage
+  float iesire_ftj = LPF_ALPHA * voltage + (1 - LPF_ALPHA) * previous_lpf_output; // Applies low-pass filter
+  previous_lpf_output = iesire_ftj; // Saves filter state
+  float iesire_fts = HPF_ALPHA * (previous_hpf_output + iesire_ftj - previous_hpf_input); // Applies high-pass filter
+  previous_hpf_input = iesire_ftj; // Saves filter state
+  previous_hpf_output = iesire_fts; // Saves filter state
+  current_filtered_ecg_mv = iesire_fts * 1000.0; // Converts filtered voltage to millivolts
+  ecg_ready_to_send = true; // Sets flag for sending
+  lead_off_plus = digitalRead(PIN_LO_PLUS); // Reads + electrode state
+  lead_off_minus = digitalRead(PIN_LO_MINUS); // Reads - electrode state
 }
 
 void setup() {
   Serial.begin(115200); // Initializes serial communication
   Wire.begin(PIN_SDA_MAX30102, PIN_SCL_MAX30102); // Initializes I2C communication on specified pins
 
-  if (!senzor_puls.begin(Wire, I2C_SPEED_FAST)) { // Initializes MAX30102 sensor
+  if (!pulse_sensor.begin(Wire, I2C_SPEED_FAST)) { // Initializes MAX30102 sensor
     Serial.println("MAX30102 was not found. Check connections/power supply.");
     while (1); // Stops execution if sensor is not found
   }
   Serial.println("MAX30102 initialized.");
 
   // MAX30102 configuration: LED power, sample average, mode (Red+IR), sample rate, pulse width, ADC range
-  senzor_puls.setup(0x1F, 4, 2, 100, 411, 4096);
+  pulse_sensor.setup(0x1F, 4, 2, 100, 411, 4096);
 
   randomSeed(micros()); // Initializes random number generator
-  pinMode(PIN_BUTON, INPUT_PULLUP); // Configures button pin as input with pull-up resistor
+  pinMode(PIN_BUTTON, INPUT_PULLUP); // Configures button pin as input with pull-up resistor
   pinMode(PIN_BUZZER, OUTPUT); // Configures buzzer pin as output
   noTone(PIN_BUZZER); // Stops buzzer at startup
 
-  for(int i=0; i<NR_MEDII_ECG; ++i) istoric_ecg[i] = 0.0; // Initializes ECG history with 0
-  for(int i=0; i<NR_MEDII_BPM; ++i) istoric_bpm[i] = 0.0; // Initializes BPM history with 0
+  for(int i=0; i<ECG_AVERAGE_SAMPLE_COUNT; ++i) ecg_history[i] = 0.0; // Initializes ECG history with 0
+  for(int i=0; i<BPM_AVERAGE_SAMPLE_COUNT; ++i) bpm_history[i] = 0.0; // Initializes BPM history with 0
 
   Serial.print("Connecting to WiFi: ");
-  Serial.println(SSID_WIFI);
-  WiFi.begin(SSID_WIFI, PAROLA_WIFI); // Starts WiFi connection
-  int incercari_wifi = 0;
-  while (WiFi.status() != WL_CONNECTED && incercari_wifi < 20) { // Waits for connection
+  Serial.println(WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD); // Starts WiFi connection
+  int wifi_attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && wifi_attempts < 20) { // Waits for connection
     delay(500);
     Serial.print(".");
-    incercari_wifi++;
+    wifi_attempts++;
   }
 
   if (WiFi.status() == WL_CONNECTED) {
@@ -320,8 +320,8 @@ void setup() {
     while(true) { delay(1000); } // Stops execution if WiFi connection cannot be established
   }
 
-  client_mqtt.setServer(SERVER_MQTT, PORT_MQTT); // Sets MQTT server
-  conectare_MQTT(); // Connects to MQTT broker
+  mqtt_client.setServer(SERVER_MQTT, PORT_MQTT); // Sets MQTT server
+  connect_MQTT(); // Connects to MQTT broker
 
   pinMode(PIN_ECG, INPUT); // Configures ECG pin as input
   pinMode(PIN_LO_PLUS, INPUT); // Configures LO+ pin as input
@@ -329,37 +329,37 @@ void setup() {
   analogSetPinAttenuation(PIN_ECG, ADC_11db); // Sets attenuation to allow reading voltages up to 3.3V
 
   // Initialize filters with a first reading to avoid startup jump
-  int valoare_initiala = analogRead(PIN_ECG);
-  float tensiune_initiala = (valoare_initiala / VALOARE_MAX_ADC) * TENSIUNE_REFERINTA_ADC;
-  iesire_ftj_anterioara = tensiune_initiala;
-  intrare_fts_anterioara = tensiune_initiala;
-  iesire_fts_anterioara = 0.0;
+  int initial_value = analogRead(PIN_ECG);
+  float initial_voltage = (initial_value / ADC_MAX_VALUE) * ADC_REFERENCE_VOLTAGE;
+  previous_lpf_output = initial_voltage;
+  previous_hpf_input = initial_voltage;
+  previous_hpf_output = 0.0;
 
   // Configure and start timer for ECG sampling
   const esp_timer_create_args_t args_timer_ecg = {
       .callback = &callback_timer_ecg, // Function to be called by timer
-      .name = "timer_ecg" // Timer name
+      .name = "ecg_timer" // Timer name
   };
-  esp_timer_create(&args_timer_ecg, &timer_ecg); // Creates timer
-  esp_timer_start_periodic(timer_ecg, (uint64_t)(TIMP_ESANTIONARE * 1000000)); // Starts periodic timer
+  esp_timer_create(&args_timer_ecg, &ecg_timer); // Creates timer
+  esp_timer_start_periodic(ecg_timer, (uint64_t)(SAMPLING_PERIOD * 1000000)); // Starts periodic timer
 }
 
 void loop() {
-  senzor_puls.check(); // Checks MAX30102 sensor state (e.g., reads FIFO data)
-  procesare_max30102(); // Processes collected MAX30102 data, if needed
+  pulse_sensor.check(); // Checks MAX30102 sensor state (e.g., reads FIFO data)
+  process_max30102(); // Processes collected MAX30102 data, if needed
 
   if (WiFi.status() != WL_CONNECTED) { // Checks whether WiFi connection is still active
     Serial.println("WiFi disconnected. Reconnecting...");
-    WiFi.begin(SSID_WIFI, PAROLA_WIFI); // Attempts reconnection
-    int incercari_wifi = 0;
-    while (WiFi.status() != WL_CONNECTED && incercari_wifi < 20) {
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD); // Attempts reconnection
+    int wifi_attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && wifi_attempts < 20) {
       delay(500);
       Serial.print(".");
-      incercari_wifi++;
+      wifi_attempts++;
     }
     if (WiFi.status() == WL_CONNECTED) {
       Serial.println("\nWiFi reconectat.");
-      conectare_MQTT(); // Reconnect to MQTT after WiFi returns
+      connect_MQTT(); // Reconnect to MQTT after WiFi returns
     } else {
       Serial.println("\nWiFi reconnection failed.");
       delay(5000);
@@ -367,66 +367,66 @@ void loop() {
     }
   }
 
-  if (!client_mqtt.connected()) { // Checks whether MQTT client is still connected
-    conectare_MQTT(); // Reconnects if needed
+  if (!mqtt_client.connected()) { // Checks whether MQTT client is still connected
+    connect_MQTT(); // Reconnects if needed
   }
-  client_mqtt.loop(); // Keeps MQTT connection alive and processes incoming messages
+  mqtt_client.loop(); // Keeps MQTT connection alive and processes incoming messages
 
-  if (ecg_pregatit_pentru_trimitere) { // If a new ECG value is available
-    trimite_ECG_MQTT(); // Sends value via MQTT
-    ecg_pregatit_pentru_trimitere = false; // Resets flag
+  if (ecg_ready_to_send) { // If a new ECG value is available
+    send_ECG_MQTT(); // Sends value via MQTT
+    ecg_ready_to_send = false; // Resets flag
   }
 
   // Logic for panic button with debounce
-  int citire = digitalRead(PIN_BUTON); // Reads current button state
-  if (citire != stare_buton_anterioara) { // If state changed
-    ultimul_timp_debounce = millis(); // Resets debounce timer
+  int reading = digitalRead(PIN_BUTTON); // Reads current button state
+  if (reading != previous_button_state) { // If state changed
+    last_debounce_time = millis(); // Resets debounce timer
   }
-  if ((millis() - ultimul_timp_debounce) > debounce_ms) { // If state is stable
-    if (citire != stare_buton_curenta) { // If stable state differs from recorded state
-      stare_buton_curenta = citire; // Updates current state
-      String payload_buton = "";
-      if (stare_buton_curenta == LOW) { // If button is pressed
-        if (!buton_activ) {
-          tone(PIN_BUZZER, FRECV_BUZZER); // Starts buzzer
-          payload_buton = "{\"description\":\"The patient pressed the button.\", \"state_code\":1}"; // Creates JSON payload
-          buton_activ = true; // Marks alarm as active
+  if ((millis() - last_debounce_time) > debounce_ms) { // If state is stable
+    if (reading != current_button_state) { // If stable state differs from recorded state
+      current_button_state = reading; // Updates current state
+      String button_payload = "";
+      if (current_button_state == LOW) { // If button is pressed
+        if (!is_button_alarm_active) {
+          tone(PIN_BUZZER, BUZZER_FREQUENCY); // Starts buzzer
+          button_payload = "{\"description\":\"The patient pressed the button.\", \"state_code\":1}"; // Creates JSON payload
+          is_button_alarm_active = true; // Marks alarm as active
         }
       } else { // If button is released
-        if (buton_activ) {
+        if (is_button_alarm_active) {
           noTone(PIN_BUZZER); // Stops buzzer
-          payload_buton = "{\"description\":\"Button is not pressed.\", \"state_code\":0}"; // Creates JSON payload
-          buton_activ = false; // Marks alarm as inactive
+          button_payload = "{\"description\":\"Button is not pressed.\", \"state_code\":0}"; // Creates JSON payload
+          is_button_alarm_active = false; // Marks alarm as inactive
         }
       }
-      if (payload_buton != "" && client_mqtt.connected()) {
-        client_mqtt.publish(TOPIC_BUTON, payload_buton.c_str()); // Publishes button state
-      } else if (payload_buton != "" && !client_mqtt.connected()) {
+      if (button_payload != "" && mqtt_client.connected()) {
+        mqtt_client.publish(TOPIC_BUTTON, button_payload.c_str()); // Publishes button state
+      } else if (button_payload != "" && !mqtt_client.connected()) {
          Serial.println("MQTT is not connected. Cannot send button state.");
       }
     }
   }
-  stare_buton_anterioara = citire; // Saves current state for next iteration
+  previous_button_state = reading; // Saves current state for next iteration
 
   // Interval for BPM/SpO2 sending and MAX30102 collection start
-  unsigned long ms_curent = millis();
-  if (ms_curent - ultimul_timp_trimitere >= interval_alti_senzori) { // Checks whether time interval has passed
-    ultimul_timp_trimitere = ms_curent; // Resets timer
-    trimite_non_ECG_MQTT(); // Sends BPM/SpO2/electrode status data
+  unsigned long current_ms = millis();
+  if (current_ms - last_send_time >= other_sensor_interval) { // Checks whether time interval has passed
+    last_send_time = current_ms; // Resets timer
+    send_non_ECG_MQTT(); // Sends BPM/SpO2/electrode status data
 
-    if (!colectare_max_in_curs) { // If data is not already being collected
-        long valoare_ir = senzor_puls.getIR(); // Reads IR value to detect finger
-        if (valoare_ir >= PRAG_IR_DEGET) { // If finger is present
-            nr_esantioane_colectate = 0; // Resets sample counter
-            colectare_max_in_curs = true; // Starts collection
+    if (!is_max_collection_in_progress) { // If data is not already being collected
+        long ir_value = pulse_sensor.getIR(); // Reads IR value to detect finger
+        if (ir_value >= FINGER_IR_THRESHOLD) { // If finger is present
+            collected_sample_count = 0; // Resets sample counter
+            is_max_collection_in_progress = true; // Starts collection
         } else { // If finger is not present
-            if (bpm_curent != 0.0 || spo2_curent != 0.0) { // If there were previously valid values
-                bpm_curent = 0.0; // Resets current BPM value
-                spo2_curent = 0.0; // Resets current SpO2 value
-                istoric_bpm_plin = false; // Resets BPM average history
-                index_istoric_bpm = 0;
-                for (int i = 0; i < NR_MEDII_BPM; ++i) istoric_bpm[i] = 0.0;
-                bpm_medie_pentru_trimitere = 0.0;
+            if (current_bpm != 0.0 || current_spo2 != 0.0) { // If there were previously valid values
+                current_bpm = 0.0; // Resets current BPM value
+                current_spo2 = 0.0; // Resets current SpO2 value
+                is_bpm_history_full = false; // Resets BPM average history
+                bpm_history_index = 0;
+                for (int i = 0; i < BPM_AVERAGE_SAMPLE_COUNT; ++i) bpm_history[i] = 0.0;
+                bpm_average_for_send = 0.0;
             }
         }
     }
