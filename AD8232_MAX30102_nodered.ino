@@ -112,10 +112,6 @@ void send_ECG_MQTT();
 void send_non_ECG_MQTT();
 void callback_timer_ecg(void* arg);
 
-// Constants for ECG moving average
-const int ECG_AVERAGE_VALUE_COUNT = 20;
-float ecg_average_values[ECG_AVERAGE_VALUE_COUNT];
-
 void connect_MQTT() {
   Serial.print("Attempting MQTT connection...");
   String client_id = "ESP32Client-"; // Creates a unique client ID
