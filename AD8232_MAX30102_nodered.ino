@@ -158,6 +158,12 @@ bool is_button_alarm_active = false; // Flag indicating whether button alarm is 
 
 esp_timer_handle_t ecg_timer; // Handle (identifier) for ECG high-precision timer
 
+const unsigned long MQTT_RECONNECT_DELAY_MS = 5000; // Delay between MQTT reconnect attempts
+const int MQTT_MAX_RECONNECT_ATTEMPTS = 5; // Maximum number of sequential MQTT reconnect attempts
+int mqtt_reconnect_attempts = 0; // Number of MQTT reconnect attempts already made in the current retry cycle
+unsigned long next_mqtt_reconnect_attempt_ms = 0; // Earliest time at which the next MQTT reconnect attempt is allowed
+bool mqtt_reconnect_failure_reported = false; // Prevents repeatedly printing the max-attempts message
+
 // Function declarations (prototypes)
 void connect_MQTT();
 void process_max30102();
@@ -166,27 +172,52 @@ void send_non_ECG_MQTT();
 void callback_timer_ecg(void* arg);
 
 void connect_MQTT() {
+  if (mqtt_client.connected()) {
+    mqtt_reconnect_attempts = 0;
+    next_mqtt_reconnect_attempt_ms = 0;
+    mqtt_reconnect_failure_reported = false;
+    return;
+  }
+
+  unsigned long current_time = millis();
+
+  if (mqtt_reconnect_attempts >= MQTT_MAX_RECONNECT_ATTEMPTS) {
+    if (!mqtt_reconnect_failure_reported) {
+      Serial.println("Could not connect to MQTT broker after multiple attempts.");
+      mqtt_reconnect_failure_reported = true;
+    }
+
+    if ((long)(current_time - next_mqtt_reconnect_attempt_ms) >= 0) {
+      mqtt_reconnect_attempts = 0;
+      mqtt_reconnect_failure_reported = false;
+    }
+    return;
+  }
+
+  if ((long)(current_time - next_mqtt_reconnect_attempt_ms) < 0) {
+    return;
+  }
+
   Serial.print("Attempting MQTT connection...");
   String client_id = "ESP32Client-"; // Creates a unique client ID
   client_id += String(random(0xffff), HEX);
-  int attempts = 0;
-  while (!mqtt_client.connected() && attempts < 5) { // Attempts to connect 5 times
-    Serial.print("\nAttempt ");
-    Serial.print(attempts + 1);
-    Serial.print(" to MQTT broker: ");
-    Serial.println(SERVER_MQTT);
-    if (mqtt_client.connect(client_id.c_str(), MQTT_USERNAME, MQTT_PASSWORD)) { // Connect with ID, username, and password
-      Serial.println("Connected to MQTT");
-    } else {
-      Serial.print("MQTT connection failed, rc=");
-      Serial.print(mqtt_client.state()); // Displays error code
-      Serial.println(" retry in 5 seconds");
-      delay(5000); // Waits 5 seconds before retrying
-    }
-    attempts++;
-  }
-  if (!mqtt_client.connected()) {
-    Serial.println("Could not connect to MQTT broker after multiple attempts.");
+
+  Serial.print("\nAttempt ");
+  Serial.print(mqtt_reconnect_attempts + 1);
+  Serial.print(" to MQTT broker: ");
+  Serial.println(SERVER_MQTT);
+
+  if (mqtt_client.connect(client_id.c_str(), MQTT_USERNAME, MQTT_PASSWORD)) { // Connect with ID, username, and password
+    Serial.println("Connected to MQTT");
+    mqtt_reconnect_attempts = 0;
+    next_mqtt_reconnect_attempt_ms = 0;
+    mqtt_reconnect_failure_reported = false;
+  } else {
+    Serial.print("MQTT connection failed, rc=");
+    Serial.print(mqtt_client.state()); // Displays error code
+    Serial.println(" retry in 5 seconds");
+    mqtt_reconnect_attempts++;
+    next_mqtt_reconnect_attempt_ms = current_time + MQTT_RECONNECT_DELAY_MS;
   }
 }
 
