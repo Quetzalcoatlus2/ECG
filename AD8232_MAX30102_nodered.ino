@@ -111,10 +111,10 @@ const char* MQTT_PASSWORD = "Mariuspi"; // Password for MQTT authentication
 
 // Buffer for raw MAX30102 data
 #define MAX30102_SAMPLE_COUNT 50 // Number of samples collected from MAX30102 before processing
-uint32_t buffer_ir[MAX30102_SAMPLE_COUNT]; // Buffer for infrared (IR) values
+uint32_t ir_buffer[MAX30102_SAMPLE_COUNT]; // Buffer for infrared (IR) values
 uint32_t red_buffer[MAX30102_SAMPLE_COUNT]; // Buffer for red LED values
 int32_t spo2; // Variable to store calculated SpO2 value
-int8_t spo2_valid; // Flag indicating whether SpO2 value is valid
+int8_t is_spo2_valid; // Flag indicating whether SpO2 value is valid
 int32_t pulse; // Variable to store calculated pulse value
 int8_t is_pulse_valid; // Flag indicating whether pulse value is valid
 
