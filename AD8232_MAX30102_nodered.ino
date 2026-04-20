@@ -24,6 +24,9 @@ const float HPF_CUTOFF_FREQUENCY = 0.5; // Cutoff frequency for the high-pass fi
 const float HPF_RC = 1.0 / (2.0 * PI * HPF_CUTOFF_FREQUENCY); // Time constant for HPF
 const float HPF_ALPHA = HPF_RC / (HPF_RC + SAMPLING_PERIOD); // Smoothing factor for HPF
 volatile float previous_hpf_output = 0.0; // Stores previous HPF output value
+
+// Protects ECG sample/state shared between the esp_timer callback and loop().
+portMUX_TYPE ecg_data_mux = portMUX_INITIALIZER_UNLOCKED;
 volatile float previous_hpf_input = 0.0; // Stores previous HPF input value
 
 portMUX_TYPE ecg_shared_data_mux = portMUX_INITIALIZER_UNLOCKED;
@@ -402,9 +405,25 @@ void loop() {
   }
   mqtt_client.loop(); // Keeps MQTT connection alive and processes incoming messages
 
+  bool ecg_should_send = false;
+  float ecg_sample_snapshot = 0.0;
+  bool lead_off_plus_snapshot = false;
+  bool lead_off_minus_snapshot = false;
+  portENTER_CRITICAL(&ecg_data_mux);
   if (ecg_ready_to_send) { // If a new ECG value is available
-    send_ECG_MQTT(); // Sends value via MQTT
-    ecg_ready_to_send = false; // Resets flag
+    ecg_sample_snapshot = current_filtered_ecg_mv;
+    lead_off_plus_snapshot = lead_off_plus;
+    lead_off_minus_snapshot = lead_off_minus;
+    ecg_ready_to_send = false; // Resets flag only after atomically copying the sample/state
+    ecg_should_send = true;
+  }
+  portEXIT_CRITICAL(&ecg_data_mux);
+
+  if (ecg_should_send) {
+    current_filtered_ecg_mv = ecg_sample_snapshot;
+    lead_off_plus = lead_off_plus_snapshot;
+    lead_off_minus = lead_off_minus_snapshot;
+    send_ECG_MQTT(); // Sends a consistent ECG sample/state snapshot via MQTT
   }
 
   // Logic for panic button with debounce
