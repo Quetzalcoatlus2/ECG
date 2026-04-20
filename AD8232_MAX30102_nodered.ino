@@ -95,12 +95,28 @@ float bpm_average_for_send = 0.0; // Average BPM value to be sent
 #define PIN_BUZZER 26 // Pin for alarm buzzer
 #define BUZZER_FREQUENCY 2000 // Frequency of buzzer sound (Hz)
 
-const char* WIFI_SSID = "Device"; // WiFi network name
-const char* WIFI_PASSWORD = "46503190"; // WiFi network password
+#ifndef WIFI_SSID
+#error "WIFI_SSID must be provided via build flags, e.g. -DWIFI_SSID=\\\"your-ssid\\\""
+#endif
+
+#ifndef WIFI_PASSWORD
+#error "WIFI_PASSWORD must be provided via build flags, e.g. -DWIFI_PASSWORD=\\\"your-password\\\""
+#endif
+
+#ifndef MQTT_USERNAME
+#error "MQTT_USERNAME must be provided via build flags, e.g. -DMQTT_USERNAME=\\\"your-username\\\""
+#endif
+
+#ifndef MQTT_PASSWORD
+#error "MQTT_PASSWORD must be provided via build flags, e.g. -DMQTT_PASSWORD=\\\"your-password\\\""
+#endif
+
+const char* WIFI_SSID = WIFI_SSID; // WiFi network name provided at build time
+const char* WIFI_PASSWORD = WIFI_PASSWORD; // WiFi network password provided at build time
 const char* SERVER_MQTT = "192.168.220.144"; // IP address of MQTT broker (Raspberry Pi)
 const int PORT_MQTT = 1883; // Standard MQTT port
-const char* MQTT_USERNAME = "pi"; // Username for MQTT authentication
-const char* MQTT_PASSWORD = "Mariuspi"; // Password for MQTT authentication
+const char* MQTT_USERNAME = MQTT_USERNAME; // Username for MQTT authentication provided at build time
+const char* MQTT_PASSWORD = MQTT_PASSWORD; // Password for MQTT authentication provided at build time
 
 // MQTT TOPICS for Node-RED
 #define TOPIC_BPM "sensorData/bpm"
