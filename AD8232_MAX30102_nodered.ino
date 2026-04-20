@@ -26,8 +26,42 @@ const float HPF_ALPHA = HPF_RC / (HPF_RC + SAMPLING_PERIOD); // Smoothing factor
 volatile float previous_hpf_output = 0.0; // Stores previous HPF output value
 volatile float previous_hpf_input = 0.0; // Stores previous HPF input value
 
-volatile float current_filtered_ecg_mv = 0.0; // Current filtered ECG signal value, in millivolts
-volatile bool ecg_ready_to_send = false; // Flag indicating whether a new ECG value is ready to send
+portMUX_TYPE ecg_shared_data_mux = portMUX_INITIALIZER_UNLOCKED;
+
+template <typename T>
+class LockedSharedValue {
+  public:
+    LockedSharedValue() : value() {}
+    explicit LockedSharedValue(T initial_value) : value(initial_value) {}
+
+    void store(T new_value) {
+      portENTER_CRITICAL(&ecg_shared_data_mux);
+      value = new_value;
+      portEXIT_CRITICAL(&ecg_shared_data_mux);
+    }
+
+    T load() const {
+      portENTER_CRITICAL(&ecg_shared_data_mux);
+      T current_value = value;
+      portEXIT_CRITICAL(&ecg_shared_data_mux);
+      return current_value;
+    }
+
+    LockedSharedValue<T> &operator=(T new_value) {
+      store(new_value);
+      return *this;
+    }
+
+    operator T() const {
+      return load();
+    }
+
+  private:
+    T value;
+};
+
+LockedSharedValue<float> current_filtered_ecg_mv(0.0); // Current filtered ECG signal value, in millivolts
+LockedSharedValue<bool> ecg_ready_to_send(false); // Flag indicating whether a new ECG value is ready to send
 
 #define ECG_AVERAGE_SAMPLE_COUNT 8 // Number of ECG samples used for moving average
 float ecg_history[ECG_AVERAGE_SAMPLE_COUNT]; // Array to store latest ECG values
