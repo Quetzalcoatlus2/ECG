@@ -269,12 +269,12 @@ void send_non_ECG_MQTT() {
 void callback_timer_ecg(void* arg) {
   int adc_value = analogRead(PIN_ECG); // Reads raw value from ADC
   float voltage = (adc_value / ADC_MAX_VALUE) * ADC_REFERENCE_VOLTAGE; // Converts to voltage
-  float iesire_ftj = LPF_ALPHA * voltage + (1 - LPF_ALPHA) * previous_lpf_output; // Applies low-pass filter
-  previous_lpf_output = iesire_ftj; // Saves filter state
-  float iesire_fts = HPF_ALPHA * (previous_hpf_output + iesire_ftj - previous_hpf_input); // Applies high-pass filter
-  previous_hpf_input = iesire_ftj; // Saves filter state
-  previous_hpf_output = iesire_fts; // Saves filter state
-  current_filtered_ecg_mv = iesire_fts * 1000.0; // Converts filtered voltage to millivolts
+  float lpf_output = LPF_ALPHA * voltage + (1 - LPF_ALPHA) * previous_lpf_output; // Applies low-pass filter
+  previous_lpf_output = lpf_output; // Saves filter state
+  float hpf_output = HPF_ALPHA * (previous_hpf_output + lpf_output - previous_hpf_input); // Applies high-pass filter
+  previous_hpf_input = lpf_output; // Saves filter state
+  previous_hpf_output = hpf_output; // Saves filter state
+  current_filtered_ecg_mv = hpf_output * 1000.0; // Converts filtered voltage to millivolts
   ecg_ready_to_send = true; // Sets flag for sending
   lead_off_plus = digitalRead(PIN_LO_PLUS); // Reads + electrode state
   lead_off_minus = digitalRead(PIN_LO_MINUS); // Reads - electrode state
